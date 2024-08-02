@@ -2,6 +2,8 @@ library widgets;
 
 export 'widgets/button.dart';
 export 'widgets/button_skeleton.dart';
+export 'widgets/field.dart';
+export 'widgets/form.dart';
 export 'widgets/gesture.dart';
 export 'widgets/guideline.dart';
 export 'widgets/icon.dart';
