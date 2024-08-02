@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_androssy_kits/flutter_androssy_kits.dart';
 
 import 'icon.dart';
 
@@ -82,6 +83,7 @@ class AndrossyField extends StatefulWidget {
   final AndrossyFieldProperty<double>? drawableEndSize;
   final AndrossyFieldProperty<double>? drawableEndPadding;
   final AndrossyFieldProperty<Color>? drawableEndTint;
+
   final bool drawableEndVisible;
   final bool drawableEndAsEye;
 
@@ -91,6 +93,7 @@ class AndrossyField extends StatefulWidget {
   final AndrossyFieldProperty<double>? drawableStartSize;
   final AndrossyFieldProperty<double>? drawableStartPadding;
   final AndrossyFieldProperty<Color>? drawableStartTint;
+
   final bool drawableStartVisible;
 
   /// ERROR TEXT PROPERTIES
@@ -482,7 +485,7 @@ class AndrossyFieldState extends State<AndrossyField> {
                   contentPadding: EdgeInsets.zero,
                   isDense: true,
                   isCollapsed: true,
-                  hintText: widget.hint,
+                  hintText: hintText,
                   hintStyle: mHintStyle,
                   hintTextDirection: widget.textDirection,
                 ),
@@ -609,7 +612,7 @@ class AndrossyFieldState extends State<AndrossyField> {
                 ),
               if (footerVisible)
                 _Footer(
-                  counterVisibility: widget.counterVisibility,
+                  counterVisibility: counterVisibility,
                   hasError: hasError,
                   floatingTextSpace: widget.floatingTextSpace,
                   textDirection: widget.textDirection,
@@ -617,7 +620,7 @@ class AndrossyFieldState extends State<AndrossyField> {
                   textAlign: widget.textAlign,
                   counter: counter,
                   errorText: errorText,
-                  helperText: widget.helperText,
+                  helperText: helperText,
                   footerTextStyle: footerTextStyle,
                   counterTextStyle: counterTextStyle,
                   errorTextColor: errorTextColor,
@@ -776,14 +779,17 @@ class AndrossyFieldState extends State<AndrossyField> {
         );
   }
 
+  late AndrossyFieldFloatingVisibility counterVisibility =
+      widget.counterVisibility;
+
   bool get counterVisible {
-    return !widget.counterVisibility.isInvisible &&
+    return !counterVisibility.isInvisible &&
         widget.textAlign != TextAlign.center;
   }
 
-  String? _errorText;
-
-  set errorText(String? value) => _errorText = value;
+  void setCounterVisibility(AndrossyFieldFloatingVisibility value) {
+    onNotifyWithCallback(() => counterVisibility = value);
+  }
 
   Color? get errorTextColor => errorTextStyle?.color ?? const Color(0xFFFF7769);
 
@@ -804,8 +810,6 @@ class AndrossyFieldState extends State<AndrossyField> {
     }
   }
 
-  String get floatingText => widget.floatingText ?? widget.hint;
-
   Color? get floatingTextColor {
     return isFocused ? primary : widget.secondaryColor;
   }
@@ -818,6 +822,23 @@ class AndrossyFieldState extends State<AndrossyField> {
     } else {
       return x.copyWith(color: Colors.transparent);
     }
+  }
+
+  late String? _floatingText = widget.floatingText;
+
+  String get floatingText => _floatingText ?? hintText;
+
+  set floatingText(String? value) => _floatingText = value;
+
+  void setFloatingText(String? value) {
+    onNotifyWithCallback(() => floatingText = value);
+  }
+
+  late AndrossyFieldFloatingVisibility floatingVisibility =
+      widget.floatingVisibility;
+
+  void setFloatingVisibility(AndrossyFieldFloatingVisibility value) {
+    onNotifyWithCallback(() => floatingVisibility = value);
   }
 
   bool get floatingVisible => !widget.floatingVisibility.isInvisible;
@@ -854,9 +875,29 @@ class AndrossyFieldState extends State<AndrossyField> {
         ?.copyWith(color: widget.secondaryColor);
   }
 
-  bool get helperTextVisible => hasError || widget.helperText.isNotEmpty;
+  bool get helperTextVisible => hasError || helperText.isNotEmpty;
+
+  late String helperText = widget.helperText;
+
+  void setHelperText(String value) {
+    onNotifyWithCallback(() => helperText = value);
+  }
+
+  late String hintText = widget.hint;
+
+  void setHintText(String value) {
+    onNotifyWithCallback(() => hintText = value);
+  }
 
   TextStyle? get hintStyle => widget.hintStyle ?? widget.textStyle;
+
+  bool get isIndicatorVisible => onActivator != null && _indicatorVisible;
+
+  late bool _indicatorVisible = widget.indicatorVisible;
+
+  void setIndicatorVisibility(bool visible) {
+    onNotifyWithCallback(() => _indicatorVisible = visible);
+  }
 
   Color? get underlineColor {
     return widget.underlineColor?.fromState(this) ??
@@ -925,7 +966,15 @@ class AndrossyFieldState extends State<AndrossyField> {
     return widget.drawableStartTint?.fromState(this);
   }
 
+  late String? _errorText = widget.errorText?.fromState(this);
+
   String? get errorText => widget.errorText?.fromState(this) ?? _errorText;
+
+  set errorText(String? value) => _errorText = value;
+
+  void setErrorText(String? value) {
+    onNotifyWithCallback(() => errorText = value);
+  }
 
   bool get hasError => (errorText ?? "").isNotEmpty;
 
@@ -1045,13 +1094,7 @@ class AndrossyFieldState extends State<AndrossyField> {
     return enabled ? widget.onTapOutside : null;
   }
 
-  /// FUNCTIONS
-
   bool _running = false;
-
-  bool get isIndicatorVisible => onActivator != null && _indicatorVisible;
-
-  late bool _indicatorVisible = widget.indicatorVisible;
 }
 
 enum AndrossyFieldFloatingVisibility {
