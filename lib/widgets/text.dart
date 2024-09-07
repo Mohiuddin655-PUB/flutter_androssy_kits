@@ -1,8 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-typedef OnAndrossyTextClickListener = void Function(BuildContext context);
-
 class AndrossyText extends StatelessWidget {
   final bool visibility;
 
@@ -12,6 +10,7 @@ class AndrossyText extends StatelessWidget {
 
   final double? letterSpacing;
   final double? lineHeight;
+  final double lineSpacingExtra;
   final Locale? locale;
   final double? wordSpacing;
 
@@ -37,9 +36,9 @@ class AndrossyText extends StatelessWidget {
   final TextScaler? textScaler;
   final double? textSize;
   final List<TextSpan> textSpans;
-  final TextStyle? textStyle;
+  final TextStyle? style;
   final TextWidthBasis textWidthBasis;
-  final OnAndrossyTextClickListener? onClick;
+  final ValueChanged<BuildContext>? onClick;
 
   ///PREFIX
   final FontStyle? prefixFontStyle;
@@ -54,7 +53,7 @@ class AndrossyText extends StatelessWidget {
   final double? prefixTextSize;
   final TextStyle? prefixTextStyle;
   final bool prefixTextVisible;
-  final OnAndrossyTextClickListener? onPrefixClick;
+  final ValueChanged<BuildContext>? onPrefixClick;
 
   ///SUFFIX
   final FontStyle? suffixFontStyle;
@@ -69,7 +68,7 @@ class AndrossyText extends StatelessWidget {
   final double? suffixTextSize;
   final TextStyle? suffixTextStyle;
   final bool suffixTextVisible;
-  final OnAndrossyTextClickListener? onSuffixClick;
+  final ValueChanged<BuildContext>? onSuffixClick;
 
   const AndrossyText({
     super.key,
@@ -80,6 +79,7 @@ class AndrossyText extends StatelessWidget {
     this.textFontWeight,
     this.letterSpacing,
     this.lineHeight,
+    this.lineSpacingExtra = 0,
     this.locale,
     this.maxLines,
     this.selectionColor,
@@ -100,7 +100,7 @@ class AndrossyText extends StatelessWidget {
     this.textScaler,
     this.textSize,
     this.textSpans = const [],
-    this.textStyle,
+    this.style,
     this.textWidthBasis = TextWidthBasis.parent,
     this.wordSpacing,
     this.onClick,
@@ -136,8 +136,17 @@ class AndrossyText extends StatelessWidget {
     this.onSuffixClick,
   });
 
+  double? get lineSpacingFactor {
+    if (lineSpacingExtra <= 0) return null;
+    final x = (textSize ?? 0) + lineSpacingExtra;
+    final y = x * 0.068;
+    return lineSpacingExtra > 0 ? y : null;
+  }
+
   GestureRecognizer? _(
-      BuildContext context, OnAndrossyTextClickListener callback) {
+    BuildContext context,
+    ValueChanged<BuildContext> callback,
+  ) {
     return TapGestureRecognizer()..onTap = () => callback(context);
   }
 
@@ -151,20 +160,22 @@ class AndrossyText extends StatelessWidget {
     final isSuffix = (suffixText ?? "").isNotEmpty && suffixTextVisible;
     final isSpannable = isPrefix || isSuffix || textSpans.isNotEmpty;
 
-    final style = (textStyle ?? theme ?? const TextStyle()).copyWith(
-      color: textColor,
-      fontSize: textSize,
-      fontWeight: textFontWeight,
-      decoration: textDecoration,
-      decorationColor: textDecorationColor,
-      decorationStyle: textDecorationStyle,
-      decorationThickness: textDecorationThickness,
-      fontFamily: textFontFamily,
-      fontStyle: textFontStyle,
-      height: lineHeight,
-      leadingDistribution: textLeadingDistribution,
-      letterSpacing: letterSpacing,
-      wordSpacing: wordSpacing,
+    final mStyle = (style ?? theme ?? const TextStyle()).copyWith(
+      color: style?.color ?? textColor,
+      fontSize: style?.fontSize ?? textSize,
+      fontWeight: style?.fontWeight ?? textFontWeight,
+      decoration: style?.decoration ?? textDecoration,
+      decorationColor: style?.decorationColor ?? textDecorationColor,
+      decorationStyle: style?.decorationStyle ?? textDecorationStyle,
+      decorationThickness:
+          style?.decorationThickness ?? textDecorationThickness,
+      fontFamily: style?.fontFamily ?? textFontFamily,
+      fontStyle: style?.fontStyle ?? textFontStyle,
+      height: style?.height ?? lineHeight ?? lineSpacingFactor,
+      leadingDistribution:
+          style?.leadingDistribution ?? textLeadingDistribution,
+      letterSpacing: style?.letterSpacing ?? letterSpacing,
+      wordSpacing: style?.wordSpacing ?? wordSpacing,
     );
 
     final mPC = onPrefixClick ?? onClick;
@@ -172,14 +183,14 @@ class AndrossyText extends StatelessWidget {
 
     var span = isSpannable
         ? TextSpan(
-            style: isEllipsis ? style : null,
+            style: isEllipsis ? mStyle : null,
             semanticsLabel: semanticsLabel,
             children: [
               if (isPrefix)
                 TextSpan(
                   text: prefixText,
                   recognizer: mPC != null ? _(context, mPC) : null,
-                  style: (prefixTextStyle ?? style).copyWith(
+                  style: (prefixTextStyle ?? mStyle).copyWith(
                     color: prefixTextColor,
                     fontSize: prefixTextSize,
                     fontStyle: prefixFontStyle,
@@ -200,7 +211,7 @@ class AndrossyText extends StatelessWidget {
                 TextSpan(
                   text: suffixText,
                   recognizer: mSC != null ? _(context, mSC) : null,
-                  style: (suffixTextStyle ?? style).copyWith(
+                  style: (suffixTextStyle ?? mStyle).copyWith(
                     color: suffixTextColor,
                     fontSize: suffixTextSize,
                     fontStyle: suffixFontStyle,
@@ -223,7 +234,7 @@ class AndrossyText extends StatelessWidget {
             text: span ??
                 TextSpan(
                   text: text,
-                  style: style,
+                  style: mStyle,
                   locale: locale,
                   semanticsLabel: semanticsLabel,
                   recognizer: onClick != null ? _(context, onClick!) : null,
@@ -248,7 +259,7 @@ class AndrossyText extends StatelessWidget {
     } else if (span != null) {
       return Text.rich(
         span,
-        style: style,
+        style: mStyle,
         strutStyle: strutStyle,
         textAlign: textAlign,
         textDirection: textDirection,
@@ -265,7 +276,7 @@ class AndrossyText extends StatelessWidget {
     } else {
       return Text(
         text ?? "",
-        style: style,
+        style: mStyle,
         strutStyle: strutStyle,
         textAlign: textAlign,
         textDirection: textDirection,

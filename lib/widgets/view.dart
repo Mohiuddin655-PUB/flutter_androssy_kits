@@ -79,10 +79,10 @@ class AndrossyView extends StatelessWidget {
   final Color? highlightColor;
   final Color? hoverColor;
   final Color? splashColor;
-  final GestureClickEffect? clickEffect;
-  final OnAndrossyGestureClickListener? onClick;
-  final OnAndrossyGestureClickListener? onDoubleClick;
-  final OnAndrossyGestureClickListener? onLongClick;
+  final AndrossyGestureEffect? clickEffect;
+  final ValueChanged<BuildContext>? onClick;
+  final ValueChanged<BuildContext>? onDoubleClick;
+  final ValueChanged<BuildContext>? onLongClick;
   final void Function(bool status)? onHover;
 
   // BASE
@@ -416,21 +416,20 @@ class AndrossyView extends StatelessWidget {
     if (onClick != null || onDoubleClick != null || onLongClick != null) {
       final td = theme.decoration;
       child = AndrossyGesture(
-        margin: _inkwell ? margin : null,
-        background: _inkwell ? _background ?? td?.color : null,
+        backgroundColor: _inkwell ? _background ?? td?.color : null,
         borderRadius: _inkwell ? _borderRadius ?? td?.borderRadius : null,
         shape: _inkwell ? decorationShape : null,
         clipBehavior: _clipBehavior,
         elevation: elevation,
         enabled: enabled,
-        haptic: haptic,
+        enableFeedback: haptic,
         highlightColor: highlightColor,
         hoverColor: hoverColor,
         splashColor: splashColor,
         clickEffect: clickEffect,
-        onClick: onClick,
-        onDoubleClick: onDoubleClick,
-        onLongClick: onLongClick,
+        onTap: onClick,
+        onDoubleTap: onDoubleClick,
+        onLongPress: onLongClick,
         onHover: onHover,
         child: child,
       );

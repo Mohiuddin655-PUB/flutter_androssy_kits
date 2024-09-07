@@ -1,182 +1,305 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import 'button_skeleton.dart';
-import 'view.dart';
+import 'gesture.dart';
 
-class AndrossyButton extends AndrossyView {
-  // ICON
+typedef AndrossyButtonToggleListener = void Function(BuildContext, bool);
+
+class AndrossyButtonProperty<T> {
+  final T? activated;
+  final T? disabled;
+  final T? enabled;
+  final T? loading;
+
+  const AndrossyButtonProperty({
+    this.activated,
+    this.disabled,
+    this.enabled,
+    this.loading,
+  });
+
+  const AndrossyButtonProperty.all(T value)
+      : this(activated: value, disabled: value, enabled: value, loading: value);
+
+  T? from(AndrossyButtonPropertyState state) {
+    switch (state) {
+      case AndrossyButtonPropertyState.activated:
+        return activated;
+      case AndrossyButtonPropertyState.disabled:
+        return disabled;
+      case AndrossyButtonPropertyState.enabled:
+        return enabled;
+      case AndrossyButtonPropertyState.loading:
+        return loading;
+    }
+  }
+}
+
+enum AndrossyButtonPropertyState {
+  activated,
+  disabled,
+  enabled,
+  loading;
+
+  factory AndrossyButtonPropertyState.from(AndrossyButtonState state) {
+    if (state.enabled) {
+      if (state.activated) return activated;
+      if (state.loading) return loading;
+      return enabled;
+    }
+    return disabled;
+  }
+}
+
+enum AndrossyBorderStyle { dotted, solid }
+
+class AndrossyButton extends StatefulWidget {
+  final double elevation;
+  final Color? elevationColor;
+  final bool enableFeedback;
+  final Color? highlightColor;
+  final Color? hoverColor;
+  final MouseCursor? mouseCursor;
+  final Color? splashColor;
+  final InteractiveInkFeatureFactory? splashFactory;
+  final WidgetStateProperty<Color?>? overlayColor;
+  final AndrossyGestureEffect clickEffect;
+
+  final bool activated;
+  final bool enabled;
+  final bool loading;
+  final double? width;
+  final double? height;
+  final BoxConstraints? constraints;
+  final EdgeInsets padding;
+  final Color? primary;
+
   final dynamic icon;
-  final IconAlignment iconAlignment;
-  final Color? iconColor;
-  final bool iconColorAsRoot;
-  final bool iconFlexible;
+  final IconAlignment iconOrIndicatorAlignment;
+  final bool autoIconOrIndicatorColorAdjustment;
+  final bool iconOrIndicatorFlexible;
   final bool iconOnly;
-  final double? iconSize;
-  final double? iconSpace;
-
-  // TEXT
+  final double? iconOrIndicatorSpace;
+  final double iconSize;
+  final Widget? indicator;
+  final double? indicatorSize;
+  final double? indicatorStrokeWidth;
   final String? text;
+  final AndrossyButtonProperty<String>? texts;
+  final bool textAllCaps;
+  final AndrossyButtonProperty<Color> textColor;
   final double? textSize;
   final FontWeight? textFontWeight;
   final TextStyle? textStyle;
-  final bool textCenter;
-  final bool textAllCaps;
-  final Color? textColor;
+  final bool centerText;
 
-  final bool activated;
+  final AndrossyButtonProperty<dynamic>? icons;
+  final AndrossyButtonProperty<Color>? iconColor;
+  final AndrossyButtonProperty<Color>? indicatorColor;
+  final AndrossyButtonProperty<Color> backgroundColor;
+
+  final bool borderOnly;
+  final AndrossyButtonProperty<Color> borderColor;
+  final BorderRadius? borderRadius;
+  final double borderStrokeAlign;
+  final double borderWidth;
+
+  final ValueChanged<BuildContext>? onDoubleClick;
+  final ValueChanged<BuildContext>? onLongClick;
+  final ValueChanged<BuildContext>? onClick;
+  final ValueChanged<bool>? onHover;
+  final AndrossyButtonToggleListener? onToggle;
 
   const AndrossyButton({
     super.key,
-    // ANIMATION
-    super.animation,
-    super.animationCurve,
-    // BACKDROP
-    super.backdropFilter,
-    super.backdropMode,
-    // DECORATION
-    super.color,
-    super.decoration,
-    super.decorationShape,
-    super.foregroundDecoration,
-    super.foregroundDecorationShape,
-    // CLIPPER
-    super.clipper,
-    super.clipConfig,
-    super.clipBehavior,
-    // DIMENSION
-    super.aspectRatio,
-    super.flex,
-    // OPACITY AND VISIBILITY
-    super.opacity,
-    super.opacityAlwaysIncludeSemantics,
-    super.visibility,
-    // PAINTER
-    super.painter,
-    super.painterConfig,
-    // POINTER
-    super.absorbPointer,
-    super.ignorePointer,
-    // POSITION
-    super.alignment,
-    super.position,
-    super.positionType,
-    // RENDER
-    super.onRenderedSize,
-    // SHADER
-    super.shaderBlendMode,
-    super.shaderCallback,
-    super.shaderGradient,
-    // SHADOW
-    super.shadows,
-    // SIZE
-    super.constraints,
-    super.height,
-    super.width,
-    // SPACER
-    super.margin,
-    super.padding,
-    // TRANSFORM
-    super.transform,
-    super.transformAlignment,
-    // GESTURE
-    super.elevation,
-    super.enabled,
-    super.haptic,
-    super.highlightColor,
-    super.hoverColor,
-    super.splashColor,
-    super.clickEffect,
-    super.onClick,
-    super.onDoubleClick,
-    super.onLongClick,
-    super.onHover,
-
-    // ICON
+    this.activated = false,
+    this.enabled = true,
+    this.loading = false,
     this.icon,
-    this.iconAlignment = IconAlignment.end,
+    this.icons,
+    this.iconOrIndicatorAlignment = IconAlignment.end,
     this.iconColor,
-    this.iconColorAsRoot = false,
-    this.iconFlexible = false,
+    this.indicatorColor,
+    this.autoIconOrIndicatorColorAdjustment = true,
+    this.iconOrIndicatorFlexible = false,
     this.iconOnly = false,
-    this.iconSize,
-    this.iconSpace,
-    // TEXT
+    this.iconSize = 24,
+    this.iconOrIndicatorSpace,
+    this.indicator,
+    this.indicatorSize,
+    this.indicatorStrokeWidth,
     this.text,
-    this.textAllCaps = true,
-    this.textCenter = false,
-    this.textColor,
+    this.texts,
+    this.centerText = false,
+    this.textColor = const AndrossyButtonProperty(),
     this.textFontWeight,
+    this.textAllCaps = false,
     this.textSize,
     this.textStyle,
-    // BASE
-    this.activated = false,
+    this.backgroundColor = const AndrossyButtonProperty(),
+    this.width,
+    this.height,
+    this.constraints,
+    this.padding = const EdgeInsets.all(8),
+    this.borderColor = const AndrossyButtonProperty(),
+    this.borderWidth = 1.5,
+    this.borderStrokeAlign = BorderSide.strokeAlignInside,
+    this.onDoubleClick,
+    this.onLongClick,
+    this.onHover,
+    this.onClick,
+    this.onToggle,
+    this.primary,
+    this.borderOnly = false,
+    this.borderRadius,
+    this.elevation = 0,
+    this.elevationColor,
+    this.enableFeedback = true,
+    this.highlightColor,
+    this.hoverColor,
+    this.mouseCursor,
+    this.splashColor,
+    this.splashFactory,
+    this.overlayColor,
+    this.clickEffect = const AndrossyGestureEffect(),
   });
 
-  bool get _iconOnly => iconOnly && icon != null;
+  @override
+  State<AndrossyButton> createState() => AndrossyButtonState();
+}
 
-  bool get _textOnly => !_iconOnly && text != null && text!.isNotEmpty;
+class AndrossyButtonState extends State<AndrossyButton> {
+  late bool _activated = widget.activated;
+
+  bool get activated => _activated;
+
+  late bool _enabled = widget.enabled;
+
+  bool get enabled => _enabled;
+
+  late bool _loading = widget.loading;
+
+  bool get loading => _loading && enabled;
+
+  bool get _clickable => enabled && !_loading;
+
+  void setActivated(bool value) => setState(() => _activated = value);
+
+  void setEnabled(bool value) => setState(() => _enabled = value);
+
+  void setLoading(bool value) => setState(() => _loading = value);
+
+  void showLoader() => setLoading(true);
+
+  void hideLoader() => setLoading(false);
 
   @override
-  ViewTheme defaultTheme(BuildContext context) {
-    final theme = ButtonTheme.of(context);
-    final scheme = theme.colorScheme;
-    final io = _iconOnly;
-    final p = theme.padding;
-    final x = min(p.horizontal, p.vertical);
-    print(x);
-    return ViewTheme(
-      decoration: BoxDecoration(
-        color: enabled
-            ? activated
-                ? scheme?.secondary
-                : scheme?.primary
-            : scheme?.tertiary,
-        borderRadius: io ? null : BorderRadius.circular(x * 2),
-        shape: io ? BoxShape.circle : BoxShape.rectangle,
-      ),
-      constraints: io ? null : BoxConstraints(minWidth: theme.minWidth),
-      padding: io
-          ? EdgeInsets.all(x / 2)
-          : _textOnly
-              ? EdgeInsets.symmetric(
-                  horizontal: p.horizontal / 2,
-                  vertical: p.vertical / 2,
-                )
-              : theme.padding,
-      alignment: height != null && height! > 0 ? Alignment.center : null,
-    );
+  void didUpdateWidget(covariant AndrossyButton oldWidget) {
+    _activated = widget.activated;
+    _enabled = widget.enabled;
+    _loading = widget.loading;
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
-  Widget attach(BuildContext context) {
-    if (!visibility) return const SizedBox.shrink();
-    final theme = ButtonTheme.of(context);
-    final scheme = theme.colorScheme;
+  Widget build(BuildContext context) {
+    final state = AndrossyButtonPropertyState.from(this);
 
-    final fg = enabled
+    final text = widget.texts?.from(state) ?? widget.text ?? "";
+
+    final primaryColor = widget.primary ?? Theme.of(context).primaryColor;
+    final isClickMode = widget.onClick != null ||
+        widget.onToggle != null ||
+        widget.onDoubleClick != null ||
+        widget.onLongClick != null ||
+        widget.onHover != null;
+
+    final borderColor = widget.borderColor.from(state);
+
+    final foregroundColor = enabled && isClickMode
         ? activated
-            ? scheme?.onSecondary
-            : scheme?.onPrimary
-        : scheme?.onTertiary;
+            ? widget.borderOnly
+                ? borderColor ?? primaryColor
+                : primaryColor
+            : widget.borderOnly
+                ? borderColor ?? primaryColor
+                : Colors.white
+        : Colors.grey.withOpacity(0.75);
 
-    return AndrossyButtonSkeleton(
-      icon: icon,
-      iconAlignment: iconAlignment,
-      iconFlexible: iconFlexible,
-      iconOnly: _iconOnly,
-      iconColor: iconColor,
-      iconColorAsRoot: iconColorAsRoot,
-      iconSize: iconSize,
-      iconSpace: iconSpace,
-      text: _iconOnly ? null : text,
-      textAllCaps: textAllCaps,
-      textCenter: textCenter,
-      textColor: textColor ?? fg,
-      textFontWeight: textFontWeight ?? FontWeight.w600,
-      textSize: textSize ?? 16,
-      textStyle: textStyle,
+    return AndrossyGesture(
+      backgroundColor: !widget.borderOnly
+          ? widget.backgroundColor.from(state) ??
+              (enabled && isClickMode
+                  ? activated
+                      ? primaryColor.withOpacity(0.1)
+                      : primaryColor
+                  : Colors.grey.withOpacity(0.1))
+          : null,
+      clickEffect: widget.clickEffect,
+      clipBehavior: Clip.antiAlias,
+      enabled: widget.enabled,
+      enableFeedback: widget.enableFeedback,
+      elevation: widget.elevation,
+      elevationColor: widget.elevationColor,
+      highlightColor: widget.highlightColor,
+      hoverColor: widget.hoverColor,
+      overlayColor: widget.overlayColor,
+      mouseCursor: widget.mouseCursor,
+      splashColor: widget.splashColor,
+      splashFactory: widget.splashFactory,
+      materialType: widget.borderOnly ? MaterialType.transparency : null,
+      shape: RoundedRectangleBorder(
+        side: borderColor != null || widget.borderOnly
+            ? BorderSide(
+                color: borderColor ?? foregroundColor,
+                width: widget.borderWidth,
+              )
+            : BorderSide.none,
+        borderRadius: widget.borderRadius ?? BorderRadius.circular(24),
+      ),
+      onTap: _clickable && (widget.onClick != null || widget.onToggle != null)
+          ? _onTap
+          : null,
+      onDoubleTap: _clickable ? widget.onDoubleClick : null,
+      onLongPress: _clickable ? widget.onLongClick : null,
+      onHover: _clickable ? widget.onHover : null,
+      child: AndrossyButtonSkeleton(
+        width: widget.width,
+        height: widget.height,
+        constraints: widget.constraints,
+        padding: widget.padding,
+        icon: widget.icons?.from(state) ?? widget.icon,
+        iconAlignment: widget.iconOrIndicatorAlignment,
+        iconColor: widget.iconColor?.from(state) ?? foregroundColor,
+        iconColorAsRoot: widget.autoIconOrIndicatorColorAdjustment,
+        iconFlexible: widget.iconOrIndicatorFlexible,
+        iconOnly: widget.iconOnly,
+        iconSize: widget.iconSize,
+        iconSpace: widget.iconOrIndicatorSpace,
+        text: text,
+        textStyle: widget.textStyle,
+        textColor: widget.textColor.from(state) ?? foregroundColor,
+        textSize: widget.textSize,
+        textAllCaps: widget.textAllCaps,
+        textFontWeight: widget.textFontWeight,
+        textCenter: widget.centerText,
+        indicator: widget.indicator,
+        indicatorColor: widget.indicatorColor?.from(state) ?? foregroundColor,
+        indicatorSize: widget.indicatorSize,
+        indicatorStrokeWidth: widget.indicatorStrokeWidth,
+        indicatorVisible: loading,
+      ),
     );
+  }
+
+  void _onTap(BuildContext context) {
+    if (widget.onToggle != null) {
+      setState(() {
+        _activated = !activated;
+        widget.onToggle!(context, activated);
+      });
+    } else if (widget.onClick != null) {
+      widget.onClick!(context);
+    }
   }
 }

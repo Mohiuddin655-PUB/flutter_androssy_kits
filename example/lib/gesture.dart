@@ -20,7 +20,7 @@ class GestureExample extends StatelessWidget {
               onClick: (context) {
                 log("onClick");
               },
-              clickEffect: const GestureClickEffect.fade(
+              clickEffect: AndrossyGestureEffect.fade(
                 lowerBound: 0.5,
                 upperBound: 1,
               ),

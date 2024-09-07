@@ -1,13 +1,16 @@
 library widgets;
 
+export 'widgets/avatar.dart';
 export 'widgets/button.dart';
 export 'widgets/button_skeleton.dart';
+export 'widgets/countdown.dart';
 export 'widgets/field.dart';
 export 'widgets/form.dart';
 export 'widgets/gesture.dart';
 export 'widgets/guideline.dart';
 export 'widgets/icon.dart';
 export 'widgets/image.dart';
+export 'widgets/option.dart';
 export 'widgets/rating.dart';
 export 'widgets/rating_indicator.dart';
 export 'widgets/render.dart';
@@ -16,5 +19,7 @@ export 'widgets/singleton.dart';
 export 'widgets/splash.dart';
 export 'widgets/swiper.dart';
 export 'widgets/switch.dart';
+export 'widgets/tab.dart';
 export 'widgets/text.dart';
+export 'widgets/toolbar.dart';
 export 'widgets/view.dart';
