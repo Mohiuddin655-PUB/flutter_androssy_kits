@@ -40,6 +40,8 @@ typedef AndrossyFieldTapOutsideListener = void Function(PointerDownEvent event);
 
 class AndrossyField extends StatefulWidget {
   /// GLOBAL PROPERTIES
+  final double? width;
+  final double? height;
   final Curve? animationCurve;
   final Duration? animationDuration;
   final AndrossyFieldProperty<Color?>? backgroundColor;
@@ -193,6 +195,7 @@ class AndrossyField extends StatefulWidget {
     this.focusNode,
     this.footerStyle,
     this.footerVisibility,
+    this.height,
     this.helperStyle,
     this.hintColor,
     this.indicatorAlignment,
@@ -206,6 +209,7 @@ class AndrossyField extends StatefulWidget {
     this.strutStyle,
     this.underlineColor,
     this.underlineHeight,
+    this.width,
 
     /// TEXT FIELD GLOBAL PROPERTIES
     this.clipBehavior,
@@ -318,6 +322,7 @@ class AndrossyField extends StatefulWidget {
     FocusNode? focusNode,
     AndrossyFieldProperty<TextStyle?>? footerStyle,
     FloatingVisibility? footerVisibility,
+    double? height,
     AndrossyFieldProperty<TextStyle?>? helperStyle,
     Color? hintColor,
     IndicatorAlignment? indicatorAlignment,
@@ -331,6 +336,7 @@ class AndrossyField extends StatefulWidget {
     StrutStyle? strutStyle,
     AndrossyFieldProperty<Color?>? underlineColor,
     AndrossyFieldProperty<double?>? underlineHeight,
+    double? width,
 
     /// TEXT FIELD GLOBAL PROPERTIES
     Clip? clipBehavior,
@@ -447,6 +453,7 @@ class AndrossyField extends StatefulWidget {
       focusNode: this.focusNode ?? focusNode,
       footerStyle: this.footerStyle ?? footerStyle,
       footerVisibility: this.footerVisibility ?? footerVisibility,
+      height: this.height ?? height,
       helperStyle: this.helperStyle ?? helperStyle,
       hintColor: this.hintColor ?? hintColor,
       indicatorAlignment: this.indicatorAlignment ?? indicatorAlignment,
@@ -460,6 +467,7 @@ class AndrossyField extends StatefulWidget {
       secondaryColor: this.secondaryColor ?? secondaryColor,
       strutStyle: this.strutStyle ?? strutStyle,
       underlineHeight: this.underlineHeight ?? underlineHeight,
+      width: this.width ?? width,
 
       /// TEXT FIELD GLOBAL PROPERTIES
       clipBehavior: this.clipBehavior ?? clipBehavior,
@@ -682,7 +690,8 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   late final indicatorSize = widget.indicatorSize ?? 24;
 
-  Border _border(AndrossyFieldPropertyState state) {
+  Border? _border(AndrossyFieldPropertyState state) {
+    if (widget.borderColor?._none ?? false) return null;
     final borderWidth = widget.borderWidth;
     final normalWidth = borderWidth?.inactive ?? 1.5;
     final focusedWidth = borderWidth?.active ?? 2.0;
@@ -858,6 +867,8 @@ class AndrossyFieldState extends State<AndrossyField> {
 
     if (animationDuration != null) {
       return AnimatedContainer(
+        width: widget.width,
+        height: widget.height,
         duration: animationDuration!,
         curve: animationCurve,
         color: color,
@@ -869,6 +880,8 @@ class AndrossyFieldState extends State<AndrossyField> {
       );
     } else {
       return Container(
+        width: widget.width,
+        height: widget.height,
         decoration: decoration,
         clipBehavior: clipBehavior,
         color: color,
@@ -1242,13 +1255,13 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   set helperText(String? value) => _hintText = value;
 
-  void setHelperText(String value) => notify(() => _helperText = value);
+  void setHelperText(String? value) => notify(() => _helperText = value);
 
   late String? _hintText = widget.hintText;
 
   String get hintText => _hintText ?? '';
 
-  void setHintText(String value) {
+  void setHintText(String? value) {
     notify(() => _hintText = value);
   }
 
@@ -1440,18 +1453,19 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     final cv = counterVisibility;
     final counterVisible = !cv.isHide;
+
     final hasError = this.hasError;
 
     final footerStyle = footerTextStyle?.copyWith(
       color: footerTextStyle?.color,
     );
 
-    final counterStyle = counterTextStyle?.copyWith(
-          color: cv.isAuto && !isFocused
-              ? Colors.transparent
-              : counterTextStyle?.color ?? footerTextStyle?.color,
-        ) ??
-        footerStyle;
+    final counterColor = cv.isAuto && !isFocused
+        ? Colors.transparent
+        : counterTextStyle?.color ?? footerTextStyle?.color;
+
+    final counterStyle = counterTextStyle?.copyWith(color: counterColor) ??
+        footerStyle?.copyWith(color: counterColor);
 
     final errorStyle = errorTextStyle?.copyWith(
           color: errorTextStyle?.color ?? footerTextStyle?.color,
@@ -1790,6 +1804,7 @@ class AndrossyFieldTweenProperty<T> {
 }
 
 class AndrossyFieldProperty<T> {
+  final bool _none;
   final T? enabled;
   final T? _disabled;
   final T? _error;
@@ -1838,11 +1853,25 @@ class AndrossyFieldProperty<T> {
         _loadingFocused = loadingFocused,
         _readOnly = readOnly,
         _validFocused = validFocused,
-        _valid = valid;
+        _valid = valid,
+        _none = false;
 
-  const AndrossyFieldProperty.none() : this();
+  const AndrossyFieldProperty.none()
+      : enabled = null,
+        _disabled = null,
+        _error = null,
+        _errorFocused = null,
+        _focused = null,
+        _loading = null,
+        _loadingFocused = null,
+        _readOnly = null,
+        _validFocused = null,
+        _valid = null,
+        _none = true;
 
   const AndrossyFieldProperty.all(T? value) : this(enabled: value);
+
+  const AndrossyFieldProperty.auto() : this();
 
   AndrossyFieldProperty<T> copyWith({
     T? disabled,
@@ -1856,6 +1885,7 @@ class AndrossyFieldProperty<T> {
     T? valid,
     T? validFocused,
   }) {
+    if (_none) return this;
     return AndrossyFieldProperty<T>(
       disabled: disabled ?? _disabled,
       enabled: enabled ?? this.enabled,
@@ -1882,6 +1912,7 @@ class AndrossyFieldProperty<T> {
     T? valid,
     T? validFocused,
   }) {
+    if (_none) return this;
     return AndrossyFieldProperty<T>(
       disabled: _disabled ?? disabled ?? this.enabled,
       enabled: this.enabled ?? enabled,
@@ -1941,13 +1972,13 @@ class AndrossyFieldProperty<T> {
 
 extension on AndrossyFieldProperty<Color?>? {
   AndrossyFieldProperty<Color?> get use {
-    return this ?? const AndrossyFieldProperty.none();
+    return this ?? const AndrossyFieldProperty();
   }
 }
 
 extension on AndrossyFieldProperty<TextStyle?>? {
   AndrossyFieldProperty<TextStyle?> get use {
-    return this ?? const AndrossyFieldProperty.none();
+    return this ?? const AndrossyFieldProperty();
   }
 }
 

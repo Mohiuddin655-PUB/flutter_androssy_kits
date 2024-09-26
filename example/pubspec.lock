@@ -132,7 +132,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.1-alpha2"
+    version: "1.0.1-alpha3"
   flutter_cache_manager:
     dependency: transitive
     description:

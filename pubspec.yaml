@@ -1,6 +1,6 @@
 name: flutter_androssy_kits
 description: "Collection of androssy_widgets with advanced styling and customization."
-version: 1.0.1-alpha2
+version: 1.0.1-alpha3
 repository: https://github.com/Mohiuddin655-PUB/flutter_androssy_kits
 
 environment:
@@ -11,9 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  cached_network_image: ^3.4.1
-  cached_network_image_platform_interface: ^4.1.1
-  flutter_cache_manager: ^3.4.1
+  cached_network_image: ^3.4.0
+  cached_network_image_platform_interface: ^4.1.0
+  flutter_cache_manager: ^3.4.0
   flutter_svg: ^2.0.10+1
 
 dev_dependencies:

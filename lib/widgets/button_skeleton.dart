@@ -24,7 +24,6 @@ class AndrossyButtonSkeleton extends StatelessWidget {
 
   final String? text;
   final double? textSize;
-  final FontWeight? textFontWeight;
   final TextStyle? textStyle;
   final bool textCenter;
   final bool textAllCaps;
@@ -53,7 +52,6 @@ class AndrossyButtonSkeleton extends StatelessWidget {
     this.textAllCaps = false,
     this.textCenter = false,
     this.textColor,
-    this.textFontWeight,
     this.textSize,
     this.textStyle,
   });
@@ -99,7 +97,7 @@ class AndrossyButtonSkeleton extends StatelessWidget {
       style: (textStyle ?? const TextStyle()).copyWith(
         color: textStyle?.color ?? textColor,
         fontSize: textStyle?.fontSize ?? textSize ?? 16,
-        fontWeight: textStyle?.fontWeight ?? textFontWeight ?? FontWeight.w600,
+        fontWeight: textStyle?.fontWeight ?? FontWeight.w600,
       ),
     );
   }

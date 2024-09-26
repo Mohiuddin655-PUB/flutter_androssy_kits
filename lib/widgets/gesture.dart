@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 typedef OnAndrossyGestureEffectBuilder = Widget Function(
   BuildContext context,
-  Animation<double> primary,
+  Animation<double> animation,
   Widget child,
 );
 
@@ -78,7 +78,30 @@ class _AndrossyGestureState extends State<AndrossyGesture>
   @override
   void initState() {
     super.initState();
-    if (_effect.primary != null && _effect.primary!._effect != _Effects.none) {
+    _init();
+  }
+
+  @override
+  void didUpdateWidget(covariant AndrossyGesture oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.clickEffect != oldWidget.clickEffect) {
+      if (_primary != null) _primary?.dispose();
+      if (_secondary != null) _secondary?.dispose();
+      _primary = null;
+      _secondary = null;
+      _init();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isPrimaryMode) _primary!.dispose();
+    if (_isSecondaryMode) _secondary!.dispose();
+    super.dispose();
+  }
+
+  void _init() {
+    if (_effect.primary != null && _effect.primary!.isActivated) {
       _primary = AnimationController(
         vsync: this,
         animationBehavior:
@@ -90,6 +113,9 @@ class _AndrossyGestureState extends State<AndrossyGesture>
         upperBound: _effect.primary?.upperBound ?? 1,
         lowerBound: _effect.primary?.lowerBound ?? 0,
       );
+      if (_effect.primary?.repeat ?? false) {
+        _primary?.repeat(reverse: true);
+      }
       final curve = _effect.primary?.curve ?? Curves.linear;
       _primaryAnimation = CurvedAnimation(
         parent: _primary!,
@@ -98,8 +124,7 @@ class _AndrossyGestureState extends State<AndrossyGesture>
       );
     }
 
-    if (_effect.secondary != null &&
-        _effect.secondary!._effect != _Effects.none) {
+    if (_effect.secondary != null && _effect.secondary!.isActivated) {
       _secondary = AnimationController(
         vsync: this,
         animationBehavior:
@@ -111,6 +136,9 @@ class _AndrossyGestureState extends State<AndrossyGesture>
         upperBound: _effect.secondary?.upperBound ?? 1,
         lowerBound: _effect.secondary?.lowerBound ?? 0,
       );
+      if (_effect.secondary?.repeat ?? false) {
+        _secondary?.repeat(reverse: true);
+      }
       final curve = _effect.secondary?.curve ?? Curves.linear;
       _secondaryAnimation = CurvedAnimation(
         parent: _secondary!,
@@ -143,13 +171,6 @@ class _AndrossyGestureState extends State<AndrossyGesture>
   void _animateStart() {
     if (_isPrimaryMode) _primary!.reverse();
     if (_isSecondaryMode) _secondary!.reverse();
-  }
-
-  @override
-  void dispose() {
-    if (_isPrimaryMode) _primary!.dispose();
-    if (_isSecondaryMode) _secondary!.dispose();
-    super.dispose();
   }
 
   void _onTap() async => _animate(widget.onTap);
@@ -268,6 +289,10 @@ class AndrossyGestureEffect {
   final AndrossyGestureAnimation? primary;
   final AndrossyGestureAnimation? secondary;
 
+  bool get isActivated {
+    return (primary?.isActivated ?? false) || (secondary?.isActivated ?? false);
+  }
+
   const AndrossyGestureEffect({
     this.primary,
     this.secondary,
@@ -283,6 +308,9 @@ class AndrossyGestureEffect {
     double value = 1.0,
     double upperBound = 1.0,
     double lowerBound = 0.75,
+    double? begin,
+    double? end,
+    bool repeat = false,
   }) : this(
           primary: AndrossyGestureAnimation.fade(
             behavior: behavior,
@@ -294,6 +322,7 @@ class AndrossyGestureEffect {
             value: value,
             upperBound: upperBound,
             lowerBound: lowerBound,
+            repeat: repeat,
           ),
         );
 
@@ -307,6 +336,7 @@ class AndrossyGestureEffect {
     double value = 1.0,
     double upperBound = 1.0,
     double lowerBound = 0.95,
+    bool repeat = false,
   }) : this(
           primary: AndrossyGestureAnimation.scale(
             behavior: behavior,
@@ -318,8 +348,41 @@ class AndrossyGestureEffect {
             value: value,
             upperBound: upperBound,
             lowerBound: lowerBound,
+            repeat: repeat,
           ),
         );
+
+  AndrossyGestureEffect.bounce({
+    AnimationBehavior behavior = AnimationBehavior.normal,
+    Curve curve = Curves.bounceInOut,
+    String? debugLabel,
+    Duration duration = const Duration(milliseconds: 130),
+    Curve? reverseCurve,
+    Duration? reverseDuration,
+    double value = 1.0,
+    double upperBound = 1.2,
+    double lowerBound = 1.0,
+    bool repeat = false,
+  }) : this(
+          primary: AndrossyGestureAnimation.bounce(
+            behavior: behavior,
+            curve: curve,
+            debugLabel: debugLabel,
+            duration: duration,
+            reverseCurve: reverseCurve,
+            reverseDuration: reverseDuration,
+            value: value,
+            upperBound: upperBound,
+            lowerBound: lowerBound,
+            repeat: repeat,
+          ),
+        );
+
+  @override
+  int get hashCode => primary.hashCode ^ secondary.hashCode;
+
+  @override
+  bool operator ==(Object other) => hashCode == other.hashCode;
 }
 
 class AndrossyGestureAnimation {
@@ -333,7 +396,19 @@ class AndrossyGestureAnimation {
   final double value;
   final double lowerBound;
   final double upperBound;
+  final bool repeat;
+  final double? begin;
+  final double? end;
   final OnAndrossyGestureEffectBuilder? builder;
+
+  bool get isActivated =>
+      _effect != _Effects.none &&
+      duration != Duration.zero &&
+      ((lowerBound != 1 && upperBound > 0) ||
+          (begin != null && end != null) ||
+          builder != null);
+
+  const AndrossyGestureAnimation.none() : this();
 
   const AndrossyGestureAnimation({
     this.builder,
@@ -345,7 +420,10 @@ class AndrossyGestureAnimation {
     this.reverseDuration,
     this.value = 1.0,
     this.upperBound = 1.0,
-    this.lowerBound = 0.9,
+    this.lowerBound = 0.0,
+    this.repeat = false,
+    this.begin,
+    this.end,
   }) : _effect = builder != null ? _Effects.custom : _Effects.none;
 
   const AndrossyGestureAnimation.scale({
@@ -358,8 +436,47 @@ class AndrossyGestureAnimation {
     this.value = 1.0,
     this.upperBound = 1.0,
     this.lowerBound = 0.95,
+    this.repeat = false,
   })  : _effect = _Effects.scale,
-        builder = null;
+        builder = null,
+        begin = null,
+        end = null;
+
+  const AndrossyGestureAnimation.bounce({
+    this.behavior = AnimationBehavior.normal,
+    this.curve = Curves.bounceInOut,
+    this.debugLabel,
+    this.duration = const Duration(milliseconds: 130),
+    this.reverseCurve,
+    this.reverseDuration,
+    this.value = 1.0,
+    this.repeat = false,
+    double upperBound = 1.2,
+    double lowerBound = 1.0,
+  })  : _effect = _Effects.scale,
+        builder = null,
+        upperBound = 1,
+        lowerBound = 0,
+        begin = upperBound,
+        end = lowerBound;
+
+  const AndrossyGestureAnimation.rotate({
+    this.behavior = AnimationBehavior.normal,
+    this.curve = Curves.bounceInOut,
+    this.debugLabel,
+    this.duration = const Duration(milliseconds: 130),
+    this.reverseCurve,
+    this.reverseDuration,
+    this.value = 1.0,
+    this.repeat = false,
+    double upperBound = 1.2,
+    double lowerBound = 1.0,
+  })  : _effect = _Effects.scale,
+        builder = null,
+        upperBound = 1,
+        lowerBound = 0,
+        begin = upperBound,
+        end = lowerBound;
 
   const AndrossyGestureAnimation.fade({
     this.behavior = AnimationBehavior.normal,
@@ -371,29 +488,47 @@ class AndrossyGestureAnimation {
     this.value = 1.0,
     this.upperBound = 1.0,
     this.lowerBound = 0.75,
+    this.repeat = false,
   })  : _effect = _Effects.fade,
-        builder = null;
+        builder = null,
+        begin = null,
+        end = null;
+
+  Tween<double>? get _tween {
+    if (begin == null && end == null) return null;
+    return Tween<double>(begin: begin, end: end);
+  }
 
   Widget _build({
     required BuildContext context,
     required Animation<double> animation,
     required Widget child,
   }) {
+    final anim = _tween != null ? _tween!.animate(animation) : animation;
     switch (_effect) {
-      case _Effects.scale:
-        return ScaleTransition(
-          scale: animation,
-          filterQuality: FilterQuality.low,
-          child: child,
-        );
       case _Effects.fade:
-        return FadeTransition(opacity: animation, child: child);
+        return FadeTransition(opacity: anim, child: child);
+      case _Effects.scale:
+        return ScaleTransition(scale: anim, child: child);
       case _Effects.custom:
-        return builder?.call(context, animation, child) ?? child;
+        return builder?.call(context, anim, child) ?? child;
       case _Effects.none:
         return child;
     }
   }
+
+  @override
+  int get hashCode =>
+      _effect.hashCode ^
+      duration.hashCode ^
+      lowerBound.hashCode ^
+      upperBound.hashCode ^
+      repeat.hashCode ^
+      begin.hashCode ^
+      end.hashCode;
+
+  @override
+  bool operator ==(Object other) => hashCode == other.hashCode;
 }
 
 enum _Effects { fade, scale, custom, none }

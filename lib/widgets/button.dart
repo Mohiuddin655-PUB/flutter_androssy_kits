@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'button_skeleton.dart';
 import 'gesture.dart';
 
+export 'gesture.dart';
+
 typedef AndrossyButtonToggleListener = void Function(BuildContext, bool);
 
 class AndrossyButtonProperty<T> {
@@ -89,7 +91,6 @@ class AndrossyButton extends StatefulWidget {
   final bool textAllCaps;
   final AndrossyButtonProperty<Color> textColor;
   final double? textSize;
-  final FontWeight? textFontWeight;
   final TextStyle? textStyle;
   final bool centerText;
 
@@ -132,7 +133,6 @@ class AndrossyButton extends StatefulWidget {
     this.texts,
     this.centerText = false,
     this.textColor = const AndrossyButtonProperty(),
-    this.textFontWeight,
     this.textAllCaps = false,
     this.textSize,
     this.textStyle,
@@ -216,7 +216,7 @@ class AndrossyButtonState extends State<AndrossyButton> {
 
     final borderColor = widget.borderColor.from(state);
 
-    final foregroundColor = enabled && isClickMode
+    final foregroundColor = (enabled && isClickMode) || _loading
         ? activated
             ? widget.borderOnly
                 ? borderColor ?? primaryColor
@@ -229,7 +229,7 @@ class AndrossyButtonState extends State<AndrossyButton> {
     return AndrossyGesture(
       backgroundColor: !widget.borderOnly
           ? widget.backgroundColor.from(state) ??
-              (enabled && isClickMode
+              ((enabled && isClickMode) || _loading
                   ? activated
                       ? primaryColor.withOpacity(0.1)
                       : primaryColor
@@ -281,13 +281,12 @@ class AndrossyButtonState extends State<AndrossyButton> {
         textColor: widget.textColor.from(state) ?? foregroundColor,
         textSize: widget.textSize,
         textAllCaps: widget.textAllCaps,
-        textFontWeight: widget.textFontWeight,
         textCenter: widget.centerText,
         indicator: widget.indicator,
         indicatorColor: widget.indicatorColor?.from(state) ?? foregroundColor,
         indicatorSize: widget.indicatorSize,
         indicatorStrokeWidth: widget.indicatorStrokeWidth,
-        indicatorVisible: loading,
+        indicatorVisible: _loading,
       ),
     );
   }

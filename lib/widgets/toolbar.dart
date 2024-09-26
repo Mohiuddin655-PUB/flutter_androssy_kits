@@ -12,6 +12,7 @@ class AndrossyToolbar extends StatelessWidget {
   final Color? elevationColor;
   final List<Widget> actions;
   final Widget? leading;
+  final Widget? child;
 
   const AndrossyToolbar({
     super.key,
@@ -26,13 +27,11 @@ class AndrossyToolbar extends StatelessWidget {
     this.elevationColor,
     this.actions = const [],
     this.leading,
+    this.child,
   });
 
   Widget _title(BuildContext context) {
-    return Text(
-      title ?? "",
-      style: titleStyle,
-    );
+    return child ?? Text(title ?? "", style: titleStyle);
   }
 
   Widget _centerMode(BuildContext context) {
