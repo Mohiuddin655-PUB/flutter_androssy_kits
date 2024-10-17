@@ -67,7 +67,9 @@ class AndrossyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data == null || data!.isEmpty) return const SizedBox.shrink();
+    if ((data == null || data!.isEmpty) && spans.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     final theme = Theme.of(context).textTheme.bodyMedium;
     final isEllipsis = ellipsis != null;
@@ -80,7 +82,7 @@ class AndrossyText extends StatelessWidget {
     final mPC = onPrefixClick ?? onClick;
     final mSC = onSuffixClick ?? onClick;
 
-    var span = isSpannable
+    final span = isSpannable
         ? TextSpan(
             style: isEllipsis ? mStyle : null,
             semanticsLabel: semanticsLabel,
@@ -91,10 +93,11 @@ class AndrossyText extends StatelessWidget {
                   recognizer: mPC != null ? _(context, mPC) : null,
                   style: prefixStyle ?? mStyle,
                 ),
-              TextSpan(
-                text: data,
-                recognizer: onClick != null ? _(context, onClick!) : null,
-              ),
+              if (data != null || data!.isNotEmpty)
+                TextSpan(
+                  text: data,
+                  recognizer: onClick != null ? _(context, onClick!) : null,
+                ),
               ...spans,
               if (isSuffix)
                 TextSpan(
@@ -109,7 +112,7 @@ class AndrossyText extends StatelessWidget {
     if (isEllipsis) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          var painter = TextPainter(
+          final painter = TextPainter(
             text: span ??
                 TextSpan(
                   text: data,
@@ -135,7 +138,9 @@ class AndrossyText extends StatelessWidget {
           );
         },
       );
-    } else if (span != null) {
+    }
+
+    if (span != null) {
       return Text.rich(
         span,
         style: mStyle,
@@ -152,24 +157,24 @@ class AndrossyText extends StatelessWidget {
         textHeightBehavior: textHeightBehavior,
         selectionColor: selectionColor,
       );
-    } else {
-      return Text(
-        data ?? "",
-        style: mStyle,
-        strutStyle: strutStyle,
-        textAlign: textAlign,
-        textDirection: textDirection,
-        locale: locale,
-        softWrap: softWrap,
-        overflow: overflow,
-        textScaler: textScaler,
-        maxLines: maxLines,
-        semanticsLabel: semanticsLabel,
-        textWidthBasis: textWidthBasis,
-        textHeightBehavior: textHeightBehavior,
-        selectionColor: selectionColor,
-      );
     }
+
+    return Text(
+      data ?? "",
+      style: mStyle,
+      strutStyle: strutStyle,
+      textAlign: textAlign,
+      textDirection: textDirection,
+      locale: locale,
+      softWrap: softWrap,
+      overflow: overflow,
+      textScaler: textScaler,
+      maxLines: maxLines,
+      semanticsLabel: semanticsLabel,
+      textWidthBasis: textWidthBasis,
+      textHeightBehavior: textHeightBehavior,
+      selectionColor: selectionColor,
+    );
   }
 }
 
