@@ -1,3 +1,3 @@
-## 1.0.2+1
+## 1.0.3
 
-* initial release.
+* Add androssy fade and coordinator
