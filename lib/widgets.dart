@@ -18,6 +18,7 @@ export 'widgets/option.dart';
 export 'widgets/rating.dart';
 export 'widgets/rating_indicator.dart';
 export 'widgets/render.dart';
+export 'widgets/selection.dart';
 export 'widgets/settings.dart';
 export 'widgets/shimmer.dart';
 export 'widgets/singleton.dart';
