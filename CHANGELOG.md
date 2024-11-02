@@ -1,3 +1,3 @@
-## 1.0.1-alpha5
+## 1.0.2
 
 * initial release.
