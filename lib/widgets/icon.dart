@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/instance.dart';
+import '../core/androssy.dart';
+import '../core/svg_picture.dart';
 
 class AndrossyIcon extends StatelessWidget {
   final bool visibility;
@@ -44,7 +45,7 @@ class AndrossyIcon extends StatelessWidget {
         if (svg == null) return SizedBox(width: size, height: size);
         return svg(
           context,
-          AndrossySvgImageConfig(
+          AndrossySvgPictureConfig(
             icon,
             width: size,
             height: size,
@@ -54,7 +55,7 @@ class AndrossyIcon extends StatelessWidget {
             theme: AndrossySvgTheme(
               currentColor: color ?? const Color(0xFF808080),
             ),
-            source: AndrossyContentSource.asset,
+            source: AndrossySvgSource.asset,
           ),
         );
       case AndrossyIconType.png:

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/instance.dart';
+import '../core/cached_network_image.dart';
 import 'image.dart';
 
 class AndrossyAvatar extends StatelessWidget {

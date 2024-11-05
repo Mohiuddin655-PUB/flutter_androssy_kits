@@ -1,4 +1,3 @@
-export 'core/instance.dart';
 export 'widgets/avatar.dart';
 export 'widgets/button.dart';
 export 'widgets/button_skeleton.dart';

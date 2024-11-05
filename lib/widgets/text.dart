@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import '../core/androssy.dart';
+
 class AndrossyText extends StatelessWidget {
   final String? ellipsis;
   final int? maxLines;
@@ -18,7 +20,7 @@ class AndrossyText extends StatelessWidget {
   final TextHeightBehavior? textHeightBehavior;
   final TextOverflow? overflow;
   final TextScaler? textScaler;
-  final List<TextSpan> spans;
+  final List<InlineSpan> spans;
   final TextStyle? style;
   final TextWidthBasis textWidthBasis;
   final ValueChanged<BuildContext>? onClick;
@@ -65,9 +67,42 @@ class AndrossyText extends StatelessWidget {
     return TapGestureRecognizer()..onTap = () => callback(context);
   }
 
+  String? _text(BuildContext context, String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final converter = Androssy.iOrNull?.textConverter;
+    if (converter == null) return null;
+    return converter(context, raw);
+  }
+
+  Iterable<InlineSpan> _spans(
+    BuildContext context,
+    Iterable<InlineSpan> children,
+  ) {
+    return children.map((e) {
+      if (e is! TextSpan) return e;
+      return TextSpan(
+        text: _text(context, e.text),
+        children: _spans(context, e.children ?? []).toList(),
+        locale: e.locale,
+        mouseCursor: e.mouseCursor,
+        onEnter: e.onEnter,
+        onExit: e.onExit,
+        recognizer: e.recognizer,
+        style: e.style,
+        semanticsLabel: e.semanticsLabel,
+        spellOut: e.spellOut,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if ((data == null || data!.isEmpty) && spans.isEmpty) {
+    final data = _text(context, this.data);
+    final prefix = _text(context, this.prefix);
+    final suffix = _text(context, this.suffix);
+    final ellipsis = _text(context, this.ellipsis);
+
+    if ((data == null || data.isEmpty) && spans.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -98,7 +133,7 @@ class AndrossyText extends StatelessWidget {
                   text: data,
                   recognizer: onClick != null ? _(context, onClick!) : null,
                 ),
-              ...spans,
+              ..._spans(context, spans),
               if (isSuffix)
                 TextSpan(
                   text: suffix,
@@ -125,7 +160,7 @@ class AndrossyText extends StatelessWidget {
             textDirection: textDirection ?? TextDirection.ltr,
             textScaler: textScaler ?? TextScaler.noScaling,
             maxLines: maxLines,
-            ellipsis: ellipsis ?? "...",
+            ellipsis: ellipsis,
             locale: locale,
             strutStyle: strutStyle,
             textWidthBasis: textWidthBasis,

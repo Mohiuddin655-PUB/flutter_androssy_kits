@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../core/instance.dart';
+import '../core/androssy.dart';
+import '../core/cached_network_image.dart';
+import '../core/svg_picture.dart';
 
 class AndrossyImage extends StatelessWidget {
   final bool visibility;
@@ -112,7 +114,7 @@ class AndrossyImage extends StatelessWidget {
     } else if (type.isSvgPicture && androssy?.svgImageBuilder != null) {
       return androssy!.svgImageBuilder!(
         context,
-        AndrossySvgImageConfig(
+        AndrossySvgPictureConfig(
           image,
           width: width,
           height: height,
@@ -127,10 +129,10 @@ class AndrossyImage extends StatelessWidget {
             currentColor: tint ?? const Color(0xFF808080),
           ),
           source: type == AndrossyImageType.svg
-              ? AndrossyContentSource.asset
+              ? AndrossySvgSource.asset
               : type == AndrossyImageType.svgNetwork
-                  ? AndrossyContentSource.network
-                  : AndrossyContentSource.string,
+                  ? AndrossySvgSource.network
+                  : AndrossySvgSource.string,
         ),
       );
     } else {

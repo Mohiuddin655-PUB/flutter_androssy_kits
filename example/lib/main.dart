@@ -7,20 +7,23 @@ import 'gesture.dart';
 
 void main() {
   Androssy.init(
+    textConverter: (context, value) {
+      return "This is translated value [$value]";
+    },
     cachedNetworkImageBuilder: (context, config) {
       return CachedNetworkImage(imageUrl: config.imageUrl);
     },
-    svgImageBuilder: (context, config) {
+    svgBuilder: (context, config) {
       switch (config.source) {
-        case AndrossyContentSource.asset:
+        case AndrossySvgSource.asset:
           return SvgPicture.asset(config.assetName);
-        case AndrossyContentSource.file:
+        case AndrossySvgSource.file:
           return SvgPicture.file(config.file);
-        case AndrossyContentSource.memory:
+        case AndrossySvgSource.memory:
           return SvgPicture.memory(config.bytes);
-        case AndrossyContentSource.network:
+        case AndrossySvgSource.network:
           return SvgPicture.network(config.url);
-        case AndrossyContentSource.string:
+        case AndrossySvgSource.string:
           return SvgPicture.string(config.string);
       }
     },
