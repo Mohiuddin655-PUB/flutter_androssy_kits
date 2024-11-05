@@ -1,3 +1,7 @@
+## 1.0.6
+
+* Text translate by translate property
+
 ## 1.0.5
 
 * Add AndrossyConfigure widget to create instance simply

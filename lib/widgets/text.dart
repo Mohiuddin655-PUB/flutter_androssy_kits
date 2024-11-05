@@ -33,6 +33,8 @@ class AndrossyText extends StatelessWidget {
   final TextStyle? suffixStyle;
   final ValueChanged<BuildContext>? onSuffixClick;
 
+  final bool translate;
+
   const AndrossyText(
     this.data, {
     super.key,
@@ -58,6 +60,7 @@ class AndrossyText extends StatelessWidget {
     this.suffix,
     this.suffixStyle,
     this.onSuffixClick,
+    this.translate = false,
   });
 
   GestureRecognizer? _(
@@ -68,6 +71,7 @@ class AndrossyText extends StatelessWidget {
   }
 
   String? _text(BuildContext context, String? raw) {
+    if (!translate) return raw;
     if (raw == null || raw.isEmpty) return null;
     final converter = Androssy.iOrNull?.textConverter;
     if (converter == null) return null;
@@ -78,6 +82,7 @@ class AndrossyText extends StatelessWidget {
     BuildContext context,
     Iterable<InlineSpan> children,
   ) {
+    if (!translate) return children;
     return children.map((e) {
       if (e is! TextSpan) return e;
       return TextSpan(
