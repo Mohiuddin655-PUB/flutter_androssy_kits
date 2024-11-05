@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cached_network_image_platform_interface/cached_network_image_platform_interface.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:flutter_svg/svg.dart';
+
+import '../core/instance.dart';
 
 class AndrossyImage extends StatelessWidget {
   final bool visibility;
@@ -35,6 +33,7 @@ class AndrossyImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!visibility || image == null) return const SizedBox.shrink();
+    final androssy = Androssy.iOrNull;
     final type = AndrossyImageType._(image, imageType);
     if (type == AndrossyImageType.asset) {
       return Image.asset(
@@ -46,38 +45,41 @@ class AndrossyImage extends StatelessWidget {
         colorBlendMode: tintMode,
       );
     } else if (type == AndrossyImageType.network) {
-      if (cacheMode) {
+      if (cacheMode && androssy?.cachedNetworkImageBuilder != null) {
         final config = networkImageConfig ?? const AndrossyNetworkImageConfig();
-        return CachedNetworkImage(
-          imageUrl: "$image",
-          width: width,
-          height: height,
-          fit: scaleType,
-          color: tint,
-          colorBlendMode: tintMode,
-          alignment: config.alignment,
-          cacheKey: config.cacheKey,
-          cacheManager: config.cacheManager,
-          errorWidget: config.errorBuilder,
-          errorListener: config.errorListener,
-          fadeInCurve: config.fadeInCurve,
-          fadeInDuration: config.fadeInDuration,
-          fadeOutCurve: config.fadeOutCurve,
-          fadeOutDuration: config.fadeOutDuration,
-          filterQuality: config.filterQuality,
-          httpHeaders: config.httpHeaders,
-          imageBuilder: config.imageBuilder,
-          imageRenderMethodForWeb: config.imageRenderMethodForWeb,
-          matchTextDirection: config.matchTextDirection,
-          maxHeightDiskCache: config.maxHeightDiskCache,
-          maxWidthDiskCache: config.maxWidthDiskCache,
-          memCacheHeight: config.memCacheHeight,
-          memCacheWidth: config.memCacheWidth,
-          placeholder: config.placeholder,
-          placeholderFadeInDuration: config.placeholderFadeInDuration,
-          progressIndicatorBuilder: config.progressBuilder,
-          repeat: config.repeat,
-          useOldImageOnUrlChange: config.useOldImageOnUrlChange,
+        return androssy!.cachedNetworkImageBuilder!(
+          context,
+          AndrossyNetworkImageConfig.adjust(
+            imageUrl: "$image",
+            width: width,
+            height: height,
+            fit: scaleType,
+            color: tint,
+            colorBlendMode: tintMode,
+            alignment: config.alignment,
+            cacheKey: config.cacheKey,
+            cacheManager: config.cacheManager,
+            errorWidget: config.errorWidget,
+            errorListener: config.errorListener,
+            fadeInCurve: config.fadeInCurve,
+            fadeInDuration: config.fadeInDuration,
+            fadeOutCurve: config.fadeOutCurve,
+            fadeOutDuration: config.fadeOutDuration,
+            filterQuality: config.filterQuality,
+            httpHeaders: config.httpHeaders,
+            imageBuilder: config.imageBuilder,
+            imageRenderMethodForWeb: config.imageRenderMethodForWeb,
+            matchTextDirection: config.matchTextDirection,
+            maxHeightDiskCache: config.maxHeightDiskCache,
+            maxWidthDiskCache: config.maxWidthDiskCache,
+            memCacheHeight: config.memCacheHeight,
+            memCacheWidth: config.memCacheWidth,
+            placeholder: config.placeholder,
+            placeholderFadeInDuration: config.placeholderFadeInDuration,
+            progressIndicatorBuilder: config.progressIndicatorBuilder,
+            repeat: config.repeat,
+            useOldImageOnUrlChange: config.useOldImageOnUrlChange,
+          ),
         );
       } else {
         return Image.network(
@@ -107,52 +109,28 @@ class AndrossyImage extends StatelessWidget {
         color: tint,
         colorBlendMode: tintMode,
       );
-    } else if (type == AndrossyImageType.svg) {
-      return SvgPicture.asset(
-        image,
-        width: width,
-        height: height,
-        fit: scaleType ?? BoxFit.contain,
-        colorFilter: tint != null
-            ? ColorFilter.mode(
-                tint!,
-                tintMode ?? BlendMode.srcIn,
-              )
-            : null,
-        theme: SvgTheme(
-          currentColor: tint ?? const Color(0xFF808080),
-        ),
-      );
-    } else if (type == AndrossyImageType.svgNetwork) {
-      return SvgPicture.network(
-        image,
-        width: width,
-        height: height,
-        fit: scaleType ?? BoxFit.contain,
-        colorFilter: tint != null
-            ? ColorFilter.mode(
-                tint!,
-                tintMode ?? BlendMode.srcIn,
-              )
-            : null,
-        theme: SvgTheme(
-          currentColor: tint ?? const Color(0xFF808080),
-        ),
-      );
-    } else if (type == AndrossyImageType.svgCode) {
-      return SvgPicture.string(
-        image,
-        width: width,
-        height: height,
-        fit: scaleType ?? BoxFit.contain,
-        colorFilter: tint != null
-            ? ColorFilter.mode(
-                tint!,
-                tintMode ?? BlendMode.srcIn,
-              )
-            : null,
-        theme: SvgTheme(
-          currentColor: tint ?? const Color(0xFF808080),
+    } else if (type.isSvgPicture && androssy?.svgImageBuilder != null) {
+      return androssy!.svgImageBuilder!(
+        context,
+        AndrossySvgImageConfig(
+          image,
+          width: width,
+          height: height,
+          fit: scaleType ?? BoxFit.contain,
+          colorFilter: tint != null
+              ? ColorFilter.mode(
+                  tint!,
+                  tintMode ?? BlendMode.srcIn,
+                )
+              : null,
+          theme: AndrossySvgTheme(
+            currentColor: tint ?? const Color(0xFF808080),
+          ),
+          source: type == AndrossyImageType.svg
+              ? AndrossyContentSource.asset
+              : type == AndrossyImageType.svgNetwork
+                  ? AndrossyContentSource.network
+                  : AndrossyContentSource.string,
         ),
       );
     } else {
@@ -162,58 +140,6 @@ class AndrossyImage extends StatelessWidget {
       );
     }
   }
-}
-
-class AndrossyNetworkImageConfig {
-  final Alignment alignment;
-  final BaseCacheManager? cacheManager;
-  final String? cacheKey;
-  final LoadingErrorWidgetBuilder? errorBuilder;
-  final ValueChanged<Object>? errorListener;
-  final Curve fadeInCurve;
-  final Duration fadeInDuration;
-  final Curve fadeOutCurve;
-  final Duration? fadeOutDuration;
-  final FilterQuality filterQuality;
-  final Map<String, String>? httpHeaders;
-  final ImageWidgetBuilder? imageBuilder;
-  final ImageRenderMethodForWeb imageRenderMethodForWeb;
-  final bool matchTextDirection;
-  final int? maxHeightDiskCache;
-  final int? maxWidthDiskCache;
-  final int? memCacheHeight;
-  final int? memCacheWidth;
-  final PlaceholderWidgetBuilder? placeholder;
-  final ProgressIndicatorBuilder? progressBuilder;
-  final Duration? placeholderFadeInDuration;
-  final ImageRepeat repeat;
-  final bool useOldImageOnUrlChange;
-
-  const AndrossyNetworkImageConfig({
-    this.alignment = Alignment.center,
-    this.cacheManager,
-    this.cacheKey,
-    this.errorBuilder,
-    this.errorListener,
-    this.fadeInCurve = Curves.easeIn,
-    this.fadeInDuration = const Duration(milliseconds: 500),
-    this.fadeOutCurve = Curves.easeOut,
-    this.fadeOutDuration,
-    this.filterQuality = FilterQuality.low,
-    this.httpHeaders,
-    this.imageBuilder,
-    this.imageRenderMethodForWeb = ImageRenderMethodForWeb.HtmlImage,
-    this.matchTextDirection = false,
-    this.maxHeightDiskCache,
-    this.maxWidthDiskCache,
-    this.memCacheHeight,
-    this.memCacheWidth,
-    this.placeholder,
-    this.progressBuilder,
-    this.placeholderFadeInDuration,
-    this.repeat = ImageRepeat.noRepeat,
-    this.useOldImageOnUrlChange = false,
-  });
 }
 
 enum AndrossyImageType {
@@ -226,6 +152,8 @@ enum AndrossyImageType {
   svg,
   svgCode,
   svgNetwork;
+
+  bool get isSvgPicture => this == svg || this == svgCode || this == svgNetwork;
 
   factory AndrossyImageType.from(dynamic data) => AndrossyImageType._(data);
 

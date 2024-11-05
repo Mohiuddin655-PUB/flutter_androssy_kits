@@ -29,9 +29,9 @@ class AndrossyGesture extends StatefulWidget {
   final bool enabled;
 
   final AndrossyGestureEffect? clickEffect;
-  final ValueChanged<BuildContext>? onTap;
-  final ValueChanged<BuildContext>? onDoubleTap;
-  final ValueChanged<BuildContext>? onLongPress;
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
+  final VoidCallback? onLongPress;
   final ValueChanged<bool>? onHover;
 
   final Widget child;
@@ -152,9 +152,9 @@ class _AndrossyGestureState extends State<AndrossyGesture>
 
   bool get _isSecondaryMode => _secondary != null;
 
-  void _animate(ValueChanged<BuildContext>? callback) {
+  void _animate(VoidCallback? callback) {
     if (callback == null) return;
-    callback(context);
+    callback();
     if (_isPrimaryMode) {
       _primary!.reverse().whenComplete(_primary!.forward);
     }
@@ -212,12 +212,8 @@ class _AndrossyGestureState extends State<AndrossyGesture>
           highlightColor: widget.highlightColor ?? Colors.transparent,
           onHover: widget.onHover,
           onTap: widget.onTap != null ? _onTap : null,
-          onDoubleTap: widget.onDoubleTap != null
-              ? () => widget.onDoubleTap!(context)
-              : null,
-          onLongPress: widget.onLongPress != null
-              ? () => widget.onLongPress!(context)
-              : null,
+          onDoubleTap: widget.onDoubleTap,
+          onLongPress: widget.onLongPress,
           onTapUp: _isHoldMode ? _onTapUp : null,
           onTapDown: _isHoldMode ? _onTapDown : null,
           onTapCancel: _isHoldMode ? _onTapCancel : null,
@@ -226,12 +222,8 @@ class _AndrossyGestureState extends State<AndrossyGesture>
       } else {
         child = GestureDetector(
           onTap: widget.onTap != null ? _onTap : null,
-          onDoubleTap: widget.onDoubleTap != null
-              ? () => widget.onDoubleTap!(context)
-              : null,
-          onLongPress: widget.onLongPress != null
-              ? () => widget.onLongPress!(context)
-              : null,
+          onDoubleTap: widget.onDoubleTap,
+          onLongPress: widget.onLongPress,
           onTapUp: _isHoldMode ? _onTapUp : null,
           onTapDown: _isHoldMode ? _onTapDown : null,
           onTapCancel: _isHoldMode ? _onTapCancel : null,

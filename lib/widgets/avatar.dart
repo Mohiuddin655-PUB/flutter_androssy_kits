@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/instance.dart';
 import 'image.dart';
 
 class AndrossyAvatar extends StatelessWidget {
@@ -43,7 +44,7 @@ class AndrossyAvatar extends StatelessWidget {
           scaleType: BoxFit.cover,
           networkImageConfig: networkImageConfig ??
               AndrossyNetworkImageConfig(
-                errorBuilder: (_, __, ___) => const SizedBox(),
+                errorWidget: (_, __, ___) => const SizedBox(),
               ),
         ),
       ),

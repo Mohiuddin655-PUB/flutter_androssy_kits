@@ -80,10 +80,10 @@ class AndrossyView extends StatelessWidget {
   final Color? hoverColor;
   final Color? splashColor;
   final AndrossyGestureEffect? clickEffect;
-  final ValueChanged<BuildContext>? onClick;
-  final ValueChanged<BuildContext>? onDoubleClick;
-  final ValueChanged<BuildContext>? onLongClick;
-  final void Function(bool status)? onHover;
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
+  final VoidCallback? onLongPress;
+  final ValueChanged<bool>? onHover;
 
   // BASE
   final Widget? child;
@@ -149,9 +149,9 @@ class AndrossyView extends StatelessWidget {
     this.hoverColor,
     this.splashColor,
     this.clickEffect,
-    this.onClick,
-    this.onDoubleClick,
-    this.onLongClick,
+    this.onTap,
+    this.onDoubleTap,
+    this.onLongPress,
     this.onHover,
 
     // BASE
@@ -413,7 +413,7 @@ class AndrossyView extends StatelessWidget {
     }
 
     /// CALLBACKS
-    if (onClick != null || onDoubleClick != null || onLongClick != null) {
+    if (onTap != null || onDoubleTap != null || onLongPress != null) {
       final td = theme.decoration;
       child = AndrossyGesture(
         backgroundColor: _inkwell ? _background ?? td?.color : null,
@@ -427,9 +427,9 @@ class AndrossyView extends StatelessWidget {
         hoverColor: hoverColor,
         splashColor: splashColor,
         clickEffect: clickEffect,
-        onTap: onClick,
-        onDoubleTap: onDoubleClick,
-        onLongPress: onLongClick,
+        onTap: onTap,
+        onDoubleTap: onDoubleTap,
+        onLongPress: onLongPress,
         onHover: onHover,
         child: child,
       );

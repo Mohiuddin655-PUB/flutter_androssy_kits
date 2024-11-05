@@ -5,8 +5,6 @@ import 'gesture.dart';
 
 export 'gesture.dart';
 
-typedef AndrossyButtonToggleListener = void Function(BuildContext, bool);
-
 class AndrossyButtonProperty<T> {
   final T? activated;
   final T? disabled;
@@ -105,11 +103,11 @@ class AndrossyButton extends StatefulWidget {
   final double borderStrokeAlign;
   final double borderWidth;
 
-  final ValueChanged<BuildContext>? onDoubleClick;
-  final ValueChanged<BuildContext>? onLongClick;
-  final ValueChanged<BuildContext>? onClick;
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
+  final VoidCallback? onLongPress;
   final ValueChanged<bool>? onHover;
-  final AndrossyButtonToggleListener? onToggle;
+  final ValueChanged<bool>? onToggle;
 
   const AndrossyButton({
     super.key,
@@ -144,10 +142,10 @@ class AndrossyButton extends StatefulWidget {
     this.borderColor = const AndrossyButtonProperty(),
     this.borderWidth = 1.5,
     this.borderStrokeAlign = BorderSide.strokeAlignInside,
-    this.onDoubleClick,
-    this.onLongClick,
+    this.onDoubleTap,
+    this.onLongPress,
     this.onHover,
-    this.onClick,
+    this.onTap,
     this.onToggle,
     this.primary,
     this.borderOnly = false,
@@ -208,10 +206,10 @@ class AndrossyButtonState extends State<AndrossyButton> {
     final text = widget.texts?.from(state) ?? widget.text ?? "";
 
     final primaryColor = widget.primary ?? Theme.of(context).primaryColor;
-    final isClickMode = widget.onClick != null ||
+    final isClickMode = widget.onTap != null ||
         widget.onToggle != null ||
-        widget.onDoubleClick != null ||
-        widget.onLongClick != null ||
+        widget.onDoubleTap != null ||
+        widget.onLongPress != null ||
         widget.onHover != null;
 
     final borderColor = widget.borderColor.from(state);
@@ -257,11 +255,11 @@ class AndrossyButtonState extends State<AndrossyButton> {
             : BorderSide.none,
         borderRadius: widget.borderRadius ?? BorderRadius.circular(24),
       ),
-      onTap: _clickable && (widget.onClick != null || widget.onToggle != null)
+      onTap: _clickable && (widget.onTap != null || widget.onToggle != null)
           ? _onTap
           : null,
-      onDoubleTap: _clickable ? widget.onDoubleClick : null,
-      onLongPress: _clickable ? widget.onLongClick : null,
+      onDoubleTap: _clickable ? widget.onDoubleTap : null,
+      onLongPress: _clickable ? widget.onLongPress : null,
       onHover: _clickable ? widget.onHover : null,
       child: AndrossyButtonSkeleton(
         width: widget.width,
@@ -291,14 +289,14 @@ class AndrossyButtonState extends State<AndrossyButton> {
     );
   }
 
-  void _onTap(BuildContext context) {
+  void _onTap() {
     if (widget.onToggle != null) {
       setState(() {
         _activated = !activated;
-        widget.onToggle!(context, activated);
+        widget.onToggle!(activated);
       });
-    } else if (widget.onClick != null) {
-      widget.onClick!(context);
+    } else if (widget.onTap != null) {
+      widget.onTap!();
     }
   }
 }

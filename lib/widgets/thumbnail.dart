@@ -15,7 +15,7 @@ class AndrossyThumbnail extends StatelessWidget {
   final Color? buttonShadowColor;
   final double buttonRadius;
   final Widget? button;
-  final ValueChanged<BuildContext>? onPlay;
+  final VoidCallback? onPlay;
 
   const AndrossyThumbnail({
     super.key,

@@ -1,7 +1,30 @@
-import 'package:example/gesture.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_androssy_kits/flutter_androssy_kits.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import 'gesture.dart';
 
 void main() {
+  Androssy.init(
+    cachedNetworkImageBuilder: (context, config) {
+      return CachedNetworkImage(imageUrl: config.imageUrl);
+    },
+    svgImageBuilder: (context, config) {
+      switch (config.source) {
+        case AndrossyContentSource.asset:
+          return SvgPicture.asset(config.assetName);
+        case AndrossyContentSource.file:
+          return SvgPicture.file(config.file);
+        case AndrossyContentSource.memory:
+          return SvgPicture.memory(config.bytes);
+        case AndrossyContentSource.network:
+          return SvgPicture.network(config.url);
+        case AndrossyContentSource.string:
+          return SvgPicture.string(config.string);
+      }
+    },
+  );
   runApp(const MyApp());
 }
 

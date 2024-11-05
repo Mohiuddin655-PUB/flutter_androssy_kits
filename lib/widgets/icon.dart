@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+
+import '../core/instance.dart';
 
 class AndrossyIcon extends StatelessWidget {
   final bool visibility;
@@ -39,14 +40,21 @@ class AndrossyIcon extends StatelessWidget {
           shadows: theme.shadows,
         );
       case AndrossyIconType.svg:
-        return SvgPicture.asset(
-          icon,
-          width: size,
-          height: size,
-          fit: fit ?? BoxFit.contain,
-          colorFilter: color != null ? ColorFilter.mode(color, tintMode) : null,
-          theme: SvgTheme(
-            currentColor: color ?? const Color(0xFF808080),
+        final svg = Androssy.iOrNull?.svgImageBuilder;
+        if (svg == null) return SizedBox(width: size, height: size);
+        return svg(
+          context,
+          AndrossySvgImageConfig(
+            icon,
+            width: size,
+            height: size,
+            fit: fit ?? BoxFit.contain,
+            colorFilter:
+                color != null ? ColorFilter.mode(color, tintMode) : null,
+            theme: AndrossySvgTheme(
+              currentColor: color ?? const Color(0xFF808080),
+            ),
+            source: AndrossyContentSource.asset,
           ),
         );
       case AndrossyIconType.png:

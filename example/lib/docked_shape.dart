@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_androssy_kits/painters.dart';
+import 'package:flutter_androssy_kits/flutter_androssy_kits.dart';
 
 class DockedShapeExample extends StatefulWidget {
   const DockedShapeExample({super.key});

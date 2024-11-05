@@ -17,9 +17,7 @@ class GestureExample extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             AndrossyButton(
-              onClick: (context) {
-                log("onClick");
-              },
+              onTap: () => log("onTap"),
               clickEffect: AndrossyGestureEffect.fade(
                 lowerBound: 0.5,
                 upperBound: 1,

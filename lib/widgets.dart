@@ -1,5 +1,4 @@
-library widgets;
-
+export 'core/instance.dart';
 export 'widgets/avatar.dart';
 export 'widgets/button.dart';
 export 'widgets/button_skeleton.dart';
@@ -17,6 +16,7 @@ export 'widgets/icon.dart';
 export 'widgets/image.dart';
 export 'widgets/observer.dart';
 export 'widgets/option.dart';
+export 'widgets/progress_gesture.dart';
 export 'widgets/rating.dart';
 export 'widgets/rating_indicator.dart';
 export 'widgets/render.dart';
