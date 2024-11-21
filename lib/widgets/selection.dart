@@ -13,10 +13,11 @@ typedef AndrossySelectionListBuilder<T> = Widget Function(
 
 typedef AndrossySelectionBuilder<T> = Widget Function(
   BuildContext context,
-  AndrossySelectionInstance<T> caller,
+  AndrossySelectionInstance<T> instance,
 );
 
 final class AndrossySelectionInstance<T> {
+  int index;
   T data;
   String tag;
   bool selected;
@@ -25,6 +26,7 @@ final class AndrossySelectionInstance<T> {
   void call() => _callback(tag);
 
   AndrossySelectionInstance._({
+    required this.index,
     required this.data,
     required this.tag,
     this.selected = false,
@@ -38,7 +40,7 @@ class AndrossySelection<T> extends StatefulWidget {
   final Iterable<String> initialTags;
   final bool singleMode;
   final bool filterMode;
-  final ValueChanged<Iterable<String>> onSelectedTags;
+  final ValueChanged<List<String>> onSelectedTags;
   final AndrossySelectionBuilder<T> builder;
   final AndrossySelectionSearchBuilder<T>? searchBuilder;
   final AndrossySelectionTagBuilder<T> tagBuilder;
@@ -94,9 +96,15 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
 
   void _init() {
     _tags = List.from(widget.initialTags);
-    _roots = widget.items.map((e) {
+    _roots = List.generate(widget.items.length, (index) {
+      final e = widget.items.elementAt(index);
       final tag = widget.tagBuilder(e);
-      return AndrossySelectionInstance._(tag: tag, data: e, callback: _put);
+      return AndrossySelectionInstance._(
+        index: index,
+        tag: tag,
+        data: e,
+        callback: _put,
+      );
     }).toList();
     _filtered = widget.filterMode ? _merge((e) => e.tag) : _roots;
     _temp = _filtered;
@@ -132,7 +140,7 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
       }
     }
     setState(() {});
-    widget.onSelectedTags(_tags);
+    widget.onSelectedTags([..._tags]..sort((a, b) => a.compareTo(b)));
   }
 
   void _filter() {

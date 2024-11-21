@@ -1,3 +1,7 @@
+## 1.0.8
+
+* Add sorting in AndrossySelection widget
+
 ## 1.0.7
 
 * Add AndrossyDataKeeper widget to handle future data as singleton
