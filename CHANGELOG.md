@@ -1,3 +1,7 @@
+## 1.0.7
+
+* Add AndrossyDataKeeper widget to handle future data as singleton
+
 ## 1.0.6
 
 * Text translate by translate property
