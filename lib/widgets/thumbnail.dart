@@ -6,7 +6,7 @@ import 'image.dart';
 
 class AndrossyThumbnail extends StatelessWidget {
   final double frameRatio;
-  final dynamic alt;
+  final dynamic data;
   final BoxFit fit;
   final Color frameColor;
   final Color? foregroundColor;
@@ -17,10 +17,10 @@ class AndrossyThumbnail extends StatelessWidget {
   final Widget? button;
   final VoidCallback? onPlay;
 
-  const AndrossyThumbnail({
+  const AndrossyThumbnail(
+    this.data, {
     super.key,
     this.frameRatio = 12 / 9,
-    this.alt,
     this.fit = BoxFit.cover,
     this.frameColor = Colors.black,
     this.foregroundColor,
@@ -42,10 +42,10 @@ class AndrossyThumbnail extends StatelessWidget {
         children: [
           ColoredBox(color: frameColor),
           AndrossyImage(
-            image: alt,
+            data,
             width: double.infinity,
             height: double.infinity,
-            scaleType: BoxFit.cover,
+            fit: BoxFit.cover,
           ),
           if (foregroundColor != null) ColoredBox(color: foregroundColor!),
           button ??
@@ -68,7 +68,7 @@ class AndrossyThumbnail extends StatelessWidget {
                       ],
                     ),
                     child: AndrossyIcon(
-                      icon: Icons.play_arrow_rounded,
+                      Icons.play_arrow_rounded,
                       size: buttonRadius * 2,
                       color: buttonForegroundColor ??
                           Colors.white.withOpacity(0.95),

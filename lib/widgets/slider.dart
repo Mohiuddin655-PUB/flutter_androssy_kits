@@ -44,7 +44,7 @@ enum PositionType {
         _bottom = bottom;
 }
 
-class AndrossySlide extends StatefulWidget {
+class AndrossySlider extends StatefulWidget {
   final double frameRatio;
   final int index;
   final int itemCount;
@@ -54,7 +54,7 @@ class AndrossySlide extends StatefulWidget {
   final PositionType counterPosition;
   final bool showCounter;
 
-  const AndrossySlide({
+  const AndrossySlider({
     super.key,
     this.counterBuilder,
     this.counterPosition = PositionType.topRight,
@@ -67,10 +67,10 @@ class AndrossySlide extends StatefulWidget {
   });
 
   @override
-  State<AndrossySlide> createState() => _AndrossySlideState();
+  State<AndrossySlider> createState() => _AndrossySliderState();
 }
 
-class _AndrossySlideState extends State<AndrossySlide> {
+class _AndrossySliderState extends State<AndrossySlider> {
   late final _pager = PageController(initialPage: widget.index);
   late final _index = ValueNotifier(widget.index);
 

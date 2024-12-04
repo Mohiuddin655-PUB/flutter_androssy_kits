@@ -125,7 +125,7 @@ class AndrossyButtonSkeleton extends StatelessWidget {
   Widget _iconWidget() {
     if (indicatorVisible) return _indicator();
     return AndrossyIcon(
-      icon: icon,
+      icon,
       color: _iconColor,
       size: iconSize,
     );

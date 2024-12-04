@@ -4,17 +4,17 @@ import '../core/androssy.dart';
 import '../core/svg_picture.dart';
 
 class AndrossyIcon extends StatelessWidget {
+  final dynamic data;
   final bool visibility;
   final BoxFit? fit;
-  final dynamic icon;
   final double? size;
   final Color? color;
   final BlendMode tintMode;
 
-  const AndrossyIcon({
+  const AndrossyIcon(
+    this.data, {
     super.key,
     this.visibility = true,
-    this.icon,
     this.fit,
     this.size,
     this.color,
@@ -23,15 +23,15 @@ class AndrossyIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!visibility || icon == null) return const SizedBox.shrink();
+    if (!visibility || data == null) return const SizedBox.shrink();
     final theme = Theme.of(context).iconTheme;
     final color = this.color ?? theme.color;
     final size = this.size ?? theme.size;
-    final type = AndrossyIconType.from(icon);
+    final type = AndrossyIconType.from(data);
     switch (type) {
       case AndrossyIconType.icon:
         return Icon(
-          icon,
+          data,
           color: color,
           size: size,
           fill: theme.fill,
@@ -46,7 +46,7 @@ class AndrossyIcon extends StatelessWidget {
         return svg(
           context,
           AndrossySvgPictureConfig(
-            icon,
+            data,
             width: size,
             height: size,
             fit: fit ?? BoxFit.contain,
@@ -60,7 +60,7 @@ class AndrossyIcon extends StatelessWidget {
         );
       case AndrossyIconType.png:
         return Image.asset(
-          icon,
+          data,
           color: color,
           width: size,
           height: size,

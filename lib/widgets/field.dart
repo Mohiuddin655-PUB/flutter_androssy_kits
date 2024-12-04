@@ -1651,8 +1651,8 @@ class _Icon extends StatelessWidget {
     if (!visibility) return const SizedBox.shrink();
 
     Widget child = AndrossyIcon(
+      icon,
       key: ValueKey(tint.hashCode ^ icon.hashCode),
-      icon: icon,
       size: size,
       color: tint,
     );

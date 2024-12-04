@@ -10,7 +10,7 @@ export 'widgets/field.dart';
 export 'widgets/flex.dart';
 export 'widgets/form.dart';
 export 'widgets/gesture.dart';
-export 'widgets/grid.dart';
+export 'widgets/image_grid.dart';
 export 'widgets/guideline.dart';
 export 'widgets/icon.dart';
 export 'widgets/image.dart';

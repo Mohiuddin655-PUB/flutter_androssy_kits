@@ -1,3 +1,10 @@
+## 1.0.9
+
+* Replace icon parameter to data from AndrossyIcon
+* Replace image parameter to data, and scaleType to fit from AndrossyImage
+* Replace alt parameter to data from AndrossyThumbnail
+* Rename AndrossySlide to AndrossySlider
+
 ## 1.0.8
 
 * Add sorting in AndrossySelection widget

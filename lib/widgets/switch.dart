@@ -257,7 +257,7 @@ class _SwitchButtonState extends State<AndrossySwitch>
                             I.thumbIconSpacing ?? 0,
                           ),
                           child: AndrossyIcon(
-                            icon: thumbIcon,
+                            thumbIcon,
                             color: thumbIconTint,
                           ),
                         ),

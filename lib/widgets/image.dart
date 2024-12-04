@@ -8,25 +8,25 @@ import '../core/cached_network_image.dart';
 import '../core/svg_picture.dart';
 
 class AndrossyImage extends StatelessWidget {
+  final dynamic data;
   final bool visibility;
-  final dynamic image;
-  final AndrossyImageType imageType;
+  final AndrossyImageType type;
   final double? width, height;
-  final BoxFit? scaleType;
+  final BoxFit? fit;
   final bool cacheMode;
   final Color? tint;
   final BlendMode? tintMode;
   final AndrossyNetworkImageConfig? networkImageConfig;
 
-  const AndrossyImage({
+  const AndrossyImage(
+    this.data, {
     super.key,
     this.visibility = true,
     this.width,
     this.height,
     this.cacheMode = true,
-    this.image,
-    this.imageType = AndrossyImageType.detect,
-    this.scaleType,
+    this.type = AndrossyImageType.detect,
+    this.fit,
     this.tint,
     this.tintMode,
     this.networkImageConfig,
@@ -34,15 +34,15 @@ class AndrossyImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!visibility || image == null) return const SizedBox.shrink();
+    if (!visibility || data == null) return const SizedBox.shrink();
     final androssy = Androssy.iOrNull;
-    final type = AndrossyImageType._(image, imageType);
+    final type = AndrossyImageType._(data, this.type);
     if (type == AndrossyImageType.asset) {
       return Image.asset(
-        "$image",
+        "$data",
         width: width,
         height: height,
-        fit: scaleType,
+        fit: fit,
         color: tint,
         colorBlendMode: tintMode,
       );
@@ -52,10 +52,10 @@ class AndrossyImage extends StatelessWidget {
         return androssy!.cachedNetworkImageBuilder!(
           context,
           AndrossyNetworkImageConfig.adjust(
-            imageUrl: "$image",
+            imageUrl: "$data",
             width: width,
             height: height,
-            fit: scaleType,
+            fit: fit,
             color: tint,
             colorBlendMode: tintMode,
             alignment: config.alignment,
@@ -85,29 +85,29 @@ class AndrossyImage extends StatelessWidget {
         );
       } else {
         return Image.network(
-          "$image",
+          "$data",
           width: width,
           height: height,
-          fit: scaleType,
+          fit: fit,
           color: tint,
           colorBlendMode: tintMode,
         );
       }
     } else if (type == AndrossyImageType.file) {
       return Image.file(
-        image,
+        data,
         width: width,
         height: height,
-        fit: scaleType,
+        fit: fit,
         color: tint,
         colorBlendMode: tintMode,
       );
     } else if (type == AndrossyImageType.memory) {
       return Image.memory(
-        image,
+        data,
         width: width,
         height: height,
-        fit: scaleType,
+        fit: fit,
         color: tint,
         colorBlendMode: tintMode,
       );
@@ -115,10 +115,10 @@ class AndrossyImage extends StatelessWidget {
       return androssy!.svgImageBuilder!(
         context,
         AndrossySvgPictureConfig(
-          image,
+          data,
           width: width,
           height: height,
-          fit: scaleType ?? BoxFit.contain,
+          fit: fit ?? BoxFit.contain,
           colorFilter: tint != null
               ? ColorFilter.mode(
                   tint!,
