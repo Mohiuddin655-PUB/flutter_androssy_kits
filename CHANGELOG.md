@@ -1,3 +1,7 @@
+## 1.0.10
+
+* Add lifecycle mixin like android lifecycle
+
 ## 1.0.9
 
 * Replace icon parameter to data from AndrossyIcon

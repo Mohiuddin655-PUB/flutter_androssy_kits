@@ -6,4 +6,5 @@ export 'core/svg_picture.dart';
 export 'painters/dock_painter.dart';
 export 'painters/painter.dart';
 export 'painters/star_painter.dart';
+export 'utils.dart';
 export 'widgets.dart';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../utils/lifecycle.dart';
 import 'button_skeleton.dart';
 import 'gesture.dart';
 
@@ -166,7 +167,7 @@ class AndrossyButton extends StatefulWidget {
   State<AndrossyButton> createState() => AndrossyButtonState();
 }
 
-class AndrossyButtonState extends State<AndrossyButton> {
+class AndrossyButtonState extends State<AndrossyButton> with LifecycleMixin{
   late bool _activated = widget.activated;
 
   bool get activated => _activated;
@@ -298,5 +299,22 @@ class AndrossyButtonState extends State<AndrossyButton> {
     } else if (widget.onTap != null) {
       widget.onTap!();
     }
+  }
+
+  @override
+  void onCreate() {
+    super.onCreate();
+  }
+
+  @override
+  void onStart() {
+    // TODO: implement onStart
+    super.onStart();
+  }
+
+  @override
+  void onResume() {
+    // TODO: implement onResume
+    super.onResume();
   }
 }
