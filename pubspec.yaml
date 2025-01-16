@@ -1,6 +1,6 @@
 name: flutter_androssy_kits
 description: "Collection of androssy_widgets with advanced styling and customization."
-version: 1.0.9
+version: 1.0.10
 repository: https://github.com/Mohiuddin655-PUB/flutter_androssy_kits
 
 environment:
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:

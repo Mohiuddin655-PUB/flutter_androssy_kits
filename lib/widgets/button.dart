@@ -300,21 +300,4 @@ class AndrossyButtonState extends State<AndrossyButton> with LifecycleMixin{
       widget.onTap!();
     }
   }
-
-  @override
-  void onCreate() {
-    super.onCreate();
-  }
-
-  @override
-  void onStart() {
-    // TODO: implement onStart
-    super.onStart();
-  }
-
-  @override
-  void onResume() {
-    // TODO: implement onResume
-    super.onResume();
-  }
 }
