@@ -32,4 +32,3 @@ export 'widgets/tab.dart';
 export 'widgets/text.dart';
 export 'widgets/thumbnail.dart';
 export 'widgets/toolbar.dart';
-export 'widgets/view.dart';
