@@ -1,3 +1,7 @@
+## 1.0.11
+
+* Update AndrossyFade widget
+
 ## 1.0.10
 
 * Add lifecycle mixin like android lifecycle

@@ -2,95 +2,116 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-class AndrossyProgressGesture extends StatefulWidget {
+class AndrossyHoldGesture extends StatefulWidget {
+  final bool enabled;
+  final int min;
+  final int? max;
+  final bool useSmoothRelease;
   final Duration duration;
   final Duration? reverseDuration;
-  final Function(double) onChanged;
+  final ValueChanged<int>? onChanged;
+  final ValueChanged<bool>? onStatus;
   final Widget child;
 
-  const AndrossyProgressGesture({
+  const AndrossyHoldGesture({
     super.key,
-    this.duration = const Duration(seconds: 2),
+    this.enabled = true,
+    this.min = 0,
+    this.max,
+    this.useSmoothRelease = false,
+    this.duration = const Duration(milliseconds: 1),
     this.reverseDuration,
-    required this.onChanged,
+    this.onChanged,
+    this.onStatus,
     required this.child,
   });
 
   @override
-  State<AndrossyProgressGesture> createState() {
-    return _AndrossyProgressGestureState();
+  State<AndrossyHoldGesture> createState() {
+    return _AndrossyHoldGestureState();
   }
 }
 
-class _AndrossyProgressGestureState extends State<AndrossyProgressGesture>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _controller;
-  Animation<double>? _animation;
+class _AndrossyHoldGestureState extends State<AndrossyHoldGesture> {
+  Timer? _x;
+  Timer? _y;
+  int _value = 0;
+  bool _status = false;
 
-  double _percentage = 0;
-  DateTime _startTime = DateTime.now();
-  bool _canceled = false;
-  Timer? _timer;
-
-  void _start([LongPressStartDetails? details]) {
-    if (_controller == null) return;
-    _canceled = false;
-    _animation = Tween(begin: _percentage, end: 1.0).animate(_controller!);
-    _controller!.forward(from: 0.0);
-    _startTime = DateTime.now();
-    _update();
+  bool get enabled {
+    return widget.enabled &&
+        (widget.onStatus != null || widget.onChanged != null);
   }
 
-  void _update() {
-    _timer?.cancel();
-    if (_canceled) return;
-    setState(() {
-      final elapsed = DateTime.now().difference(_startTime).inMilliseconds;
-      _percentage = (elapsed / widget.duration.inMilliseconds).clamp(0.0, 1.0);
-      widget.onChanged(_percentage);
-      if (_percentage < 1.0) {
-        _timer = Timer(const Duration(milliseconds: 16), _update);
-      }
-    });
+  void _hold() {
+    if (widget.onStatus != null && !_status) {
+      _status = true;
+      widget.onStatus!(_status);
+    }
+    if (widget.onChanged != null) {
+      _x?.cancel();
+      _y?.cancel();
+      _x = Timer.periodic(widget.duration, (timer) {
+        if (_value >= (widget.max ?? 0)) return timer.cancel();
+        _value++;
+        widget.onChanged!(_value);
+      });
+    }
   }
 
-  void _end([LongPressEndDetails? details]) {
-    if (_controller == null) return;
-    _canceled = true;
-    _animation = Tween(begin: _percentage, end: 0.0).animate(_controller!);
-    _controller!.forward(from: 0.0);
+  void _cancel() {
+    if (widget.onStatus != null && _status) {
+      _status = false;
+      widget.onStatus!(_status);
+    }
+    if (widget.onChanged != null) {
+      _x?.cancel();
+      _y?.cancel();
+      if (widget.useSmoothRelease) return _reset();
+      _value = 0;
+      widget.onChanged!(_value);
+    }
+  }
+
+  void _reset() {
+    if (widget.onChanged != null) {
+      _x?.cancel();
+      _y?.cancel();
+      _y = Timer.periodic(widget.reverseDuration ?? widget.duration, (timer) {
+        if (_value <= widget.min) return timer.cancel();
+        _value--;
+        widget.onChanged!(_value);
+      });
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-      reverseDuration: widget.reverseDuration ?? widget.duration,
-    );
+    _value = widget.min;
+  }
 
-    _animation = Tween(begin: 0.0, end: 0.0).animate(_controller!)
-      ..addListener(() {
-        setState(() {
-          _percentage = _animation!.value;
-          widget.onChanged(_percentage);
-        });
-      });
+  @override
+  void didUpdateWidget(covariant AndrossyHoldGesture oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.min != oldWidget.min) {
+      _value = widget.min;
+    }
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _x?.cancel();
+    _y?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPressStart: _start,
-      onLongPressEnd: _end,
-      onLongPressUp: _end,
+      onTapDown: enabled ? (_) => _hold() : null,
+      onTapUp: enabled ? (_) => _cancel() : null,
+      onTapCancel: enabled ? _cancel : null,
       child: widget.child,
     );
   }

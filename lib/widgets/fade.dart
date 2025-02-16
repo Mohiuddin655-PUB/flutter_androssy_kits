@@ -1,95 +1,77 @@
 import 'package:flutter/material.dart';
 
-enum AndrossyFadePosition { background, foreground }
+enum FadeSide {
+  top,
+  bottom,
+  left,
+  right,
+  vertical,
+  horizontal;
 
-enum AndrossyFadeType { inside, outside }
+  bool get both => this == horizontal || this == vertical;
+
+  Alignment get _begin {
+    return switch (this) {
+      top || bottom || vertical => Alignment.topCenter,
+      left || right || horizontal => Alignment.centerLeft,
+    };
+  }
+
+  Alignment get _end {
+    return switch (this) {
+      top || bottom || vertical => Alignment.bottomCenter,
+      left || right || horizontal => Alignment.centerRight,
+    };
+  }
+
+  List<Color> get _fader {
+    bool a = this == top || this == left || both;
+    bool b = this == bottom || this == right || both;
+    return [
+      a ? Colors.transparent : Colors.black,
+      Colors.black,
+      Colors.black,
+      b ? Colors.transparent : Colors.black,
+    ];
+  }
+}
 
 class AndrossyFade extends StatelessWidget {
-  final double? width;
-  final double? height;
-  final Color color;
-  final double thickness;
-  final bool top;
-  final bool left;
-  final bool right;
-  final bool bottom;
-  final AndrossyFadePosition position;
-  final AndrossyFadeType type;
-  final Widget? child;
-  final Axis axis;
+  final double fadeWidthFraction;
+  final FadeSide side;
+  final Widget child;
 
   const AndrossyFade({
     super.key,
-    this.width = double.infinity,
-    this.height,
-    this.type = AndrossyFadeType.inside,
-    this.thickness = 25.0,
-    this.color = Colors.white,
-    this.child,
-    this.top = false,
-    this.left = false,
-    this.right = false,
-    this.bottom = false,
-    this.position = AndrossyFadePosition.foreground,
-    this.axis = Axis.vertical,
+    this.fadeWidthFraction = 0.1,
+    this.side = FadeSide.horizontal,
+    required this.child,
   });
-
-  bool get isInside => type == AndrossyFadeType.inside;
-
-  bool get isForeground => position == AndrossyFadePosition.foreground;
-
-  bool get isVertical => axis == Axis.vertical;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: height ?? thickness,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (child != null && isForeground) child!,
-          if (left && !isVertical)
-            Positioned(left: 0, top: 0, bottom: 0, child: _fader(1)),
-          if (right && !isVertical)
-            Positioned(right: 0, top: 0, bottom: 0, child: _fader(2)),
-          if (top && isVertical)
-            Positioned(top: 0, left: 0, right: 0, child: _fader(3)),
-          if (bottom && isVertical)
-            Positioned(bottom: 0, left: 0, right: 0, child: _fader(4)),
-          if (child != null && !isForeground) child!,
-        ],
-      ),
-    );
-  }
-
-  Widget _fader(int type) {
-    final leftMode = type == 1;
-    final rightMode = type == 2;
-    final topMode = type == 3;
-    final bottomMode = type == 4;
-    final colors = [
-      color,
-      color.withAlpha(127),
-      color.withAlpha(127).withAlpha(50),
-    ];
-    return Container(
-      width: left || right ? thickness : null,
-      height: top || bottom ? thickness : null,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: top || bottom ? Alignment.topCenter : Alignment.centerLeft,
-          end: top || bottom ? Alignment.bottomCenter : Alignment.centerRight,
-          tileMode: TileMode.clamp,
-          stops: const [0.0, 0.35, 0.65, 1],
-          colors: [
-            if (topMode || leftMode) ...(isInside ? colors : colors.reversed),
-            color.withAlpha(0),
-            if (bottomMode || rightMode)
-              ...(isInside ? colors.reversed : colors),
-          ],
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double width = constraints.maxWidth;
+        double fadeWidth = width * fadeWidthFraction;
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: side._begin,
+              end: side._end,
+              colors: side._fader,
+              stops: [
+                0.0,
+                fadeWidth / width,
+                1.0 - fadeWidth / width,
+                1.0,
+              ],
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.dstIn,
+          child: child,
+        );
+      },
     );
   }
 }
