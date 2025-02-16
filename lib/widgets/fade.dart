@@ -53,7 +53,7 @@ class AndrossyFade extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         double width = constraints.maxWidth;
-        double fadeWidth = width * fadeWidthFraction;
+        double fadeWidth = width * (fadeWidthFraction * 0.5);
         return ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
@@ -66,7 +66,10 @@ class AndrossyFade extends StatelessWidget {
                 1.0 - fadeWidth / width,
                 1.0,
               ],
-            ).createShader(bounds);
+            ).createShader(
+              bounds.shift(Offset(-bounds.left, -bounds.top)),
+              textDirection: Directionality.of(context),
+            );
           },
           blendMode: BlendMode.dstIn,
           child: child,
