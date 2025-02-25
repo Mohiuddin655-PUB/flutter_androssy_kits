@@ -138,18 +138,27 @@ class AndrossyButtonSkeleton extends StatelessWidget {
     } else if (_textOnly) {
       return indicatorVisible ? _indicator() : _textWidget();
     } else if (_centerText) {
-      return Stack(
+      Widget child = Stack(
         alignment: Alignment.center,
         children: [
           if (text != null && text!.isNotEmpty) _textWidget(),
           if (icon != null)
             Positioned(
+              top: 0,
+              bottom: 0,
               left: _isEndIconVisible ? null : 0,
               right: _isEndIconVisible ? 0 : null,
               child: _iconWidget(),
             ),
         ],
       );
+      if (iconFlexible) {
+        return SizedBox(
+          width: double.infinity,
+          child: child,
+        );
+      }
+      return child;
     } else {
       return Row(
         mainAxisSize: MainAxisSize.min,

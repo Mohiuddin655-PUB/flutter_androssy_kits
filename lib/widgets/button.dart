@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../utils/lifecycle.dart';
 import 'button_skeleton.dart';
 import 'gesture.dart';
-
-export 'gesture.dart';
 
 class AndrossyButtonProperty<T> {
   final T? activated;
@@ -167,7 +164,7 @@ class AndrossyButton extends StatefulWidget {
   State<AndrossyButton> createState() => AndrossyButtonState();
 }
 
-class AndrossyButtonState extends State<AndrossyButton> with LifecycleMixin{
+class AndrossyButtonState extends State<AndrossyButton> {
   late bool _activated = widget.activated;
 
   bool get activated => _activated;
@@ -223,16 +220,16 @@ class AndrossyButtonState extends State<AndrossyButton> with LifecycleMixin{
             : widget.borderOnly
                 ? borderColor ?? primaryColor
                 : Colors.white
-        : Colors.grey.withOpacity(0.75);
+        : Colors.grey.withValues(alpha: 0.75);
 
     return AndrossyGesture(
       backgroundColor: !widget.borderOnly
           ? widget.backgroundColor.from(state) ??
               ((enabled && isClickMode) || _loading
                   ? activated
-                      ? primaryColor.withOpacity(0.1)
+                      ? primaryColor.withValues(alpha: 0.1)
                       : primaryColor
-                  : Colors.grey.withOpacity(0.1))
+                  : Colors.grey.withValues(alpha: 0.1))
           : null,
       clickEffect: widget.clickEffect,
       clipBehavior: Clip.antiAlias,

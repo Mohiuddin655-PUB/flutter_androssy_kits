@@ -1,4 +1,9 @@
+## 1.0.13
+
+* Update AndrossyButton and AndrossyButtonSkeleton
+
 ## 1.0.12
+
 ## 1.0.11
 
 * Update AndrossyFade widget
