@@ -52,7 +52,7 @@ class AndrossyThumbnail extends StatelessWidget {
               Center(
                 child: AndrossyGesture(
                   onTap: onPlay,
-                  clickEffect: AndrossyGestureEffect.bounce(),
+                  effects: [GestureAnimation.scale()],
                   child: Container(
                     padding: EdgeInsets.all(buttonRadius / 2),
                     decoration: BoxDecoration(

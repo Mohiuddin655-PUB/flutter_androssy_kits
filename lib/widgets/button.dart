@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'button_skeleton.dart';
@@ -61,7 +62,7 @@ class AndrossyButton extends StatefulWidget {
   final Color? splashColor;
   final InteractiveInkFeatureFactory? splashFactory;
   final WidgetStateProperty<Color?>? overlayColor;
-  final AndrossyGestureEffect clickEffect;
+  final List<GestureAnimation> clickEffects;
 
   final bool activated;
   final bool enabled;
@@ -101,10 +102,17 @@ class AndrossyButton extends StatefulWidget {
   final double borderStrokeAlign;
   final double borderWidth;
 
-  final VoidCallback? onTap;
-  final VoidCallback? onDoubleTap;
-  final VoidCallback? onLongPress;
+  final GestureTapCallback? onTap;
+  final GestureTapUpCallback? onTapUp;
+  final GestureTapDownCallback? onTapDown;
+  final GestureTapCancelCallback? onTapCancel;
+  final GestureDoubleTapCallback? onDoubleTap;
+  final GestureLongPressCallback? onLongPress;
+  final GestureLongPressStartCallback? onLongPressStart;
+  final GestureLongPressEndCallback? onLongPressEnd;
+  final GestureLongPressCancelCallback? onLongPressCancel;
   final ValueChanged<bool>? onHover;
+
   final ValueChanged<bool>? onToggle;
 
   const AndrossyButton({
@@ -140,10 +148,16 @@ class AndrossyButton extends StatefulWidget {
     this.borderColor = const AndrossyButtonProperty(),
     this.borderWidth = 1.5,
     this.borderStrokeAlign = BorderSide.strokeAlignInside,
+    this.onTap,
+    this.onTapUp,
+    this.onTapDown,
+    this.onTapCancel,
     this.onDoubleTap,
     this.onLongPress,
+    this.onLongPressStart,
+    this.onLongPressEnd,
+    this.onLongPressCancel,
     this.onHover,
-    this.onTap,
     this.onToggle,
     this.primary,
     this.borderOnly = false,
@@ -157,7 +171,7 @@ class AndrossyButton extends StatefulWidget {
     this.splashColor,
     this.splashFactory,
     this.overlayColor,
-    this.clickEffect = const AndrossyGestureEffect(),
+    this.clickEffects = const [],
   });
 
   @override
@@ -231,7 +245,7 @@ class AndrossyButtonState extends State<AndrossyButton> {
                       : primaryColor
                   : Colors.grey.withValues(alpha: 0.1))
           : null,
-      clickEffect: widget.clickEffect,
+      effects: widget.clickEffects,
       clipBehavior: Clip.antiAlias,
       enabled: widget.enabled,
       enableFeedback: widget.enableFeedback,

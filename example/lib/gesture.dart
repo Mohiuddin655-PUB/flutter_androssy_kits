@@ -18,10 +18,10 @@ class GestureExample extends StatelessWidget {
           children: [
             AndrossyButton(
               onTap: () => log("onTap"),
-              clickEffect: AndrossyGestureEffect.fade(
-                lowerBound: 0.5,
-                upperBound: 1,
-              ),
+              clickEffects: [
+                GestureAnimation.fade(target: 0.5),
+                GestureAnimation.scale(target: 0.9),
+              ],
               text: "Click",
               iconOnly: true,
               // icon: Icons.phone,

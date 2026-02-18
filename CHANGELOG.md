@@ -1,3 +1,7 @@
+## 1.0.14
+
+* Improve AndrossyButton animations and add some animation effects
+
 ## 1.0.13
 
 * Update AndrossyButton and AndrossyButtonSkeleton
