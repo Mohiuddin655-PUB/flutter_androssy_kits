@@ -37,7 +37,7 @@ class AndrossyDataResponse<T extends Object?> {
 class AndrossyDataKeeper<T extends Object?> extends StatefulWidget {
   final String backupKey;
   final AndrossyDataResponse<T>? initial;
-  final Future<T> Function() callback;
+  final Future<T?> Function() callback;
 
   final Widget Function(BuildContext, AndrossyDataResponse<T> value) builder;
 
