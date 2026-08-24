@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_androssy_kits/flutter_androssy_kits.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import 'gesture.dart';
+import 'widget_gallery.dart';
 
 void main() {
   Androssy.init(
@@ -18,7 +18,7 @@ void main() {
         case AndrossySvgSource.asset:
           return SvgPicture.asset(config.assetName);
         case AndrossySvgSource.file:
-          return SvgPicture.file(config.file);
+          return const SizedBox.shrink();
         case AndrossySvgSource.memory:
           return SvgPicture.memory(config.bytes);
         case AndrossySvgSource.network:
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue,
             primary: Colors.blue,
-            secondary: Colors.blue.withOpacity(0.1),
+            secondary: Colors.blue.withValues(alpha: 0.1),
             tertiary: Colors.grey.shade200,
             onPrimary: Colors.white,
             onSecondary: Colors.blue,
@@ -59,7 +59,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const GestureExample(),
+      home: const WidgetGalleryHomePage(),
     );
   }
 }
