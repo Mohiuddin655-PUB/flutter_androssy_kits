@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../widgets/field.dart';
-import '../widgets/form.dart';
+import 'package:flutter_androssy_kits/widgets.dart';
 
 class AndrossyFieldExamplePage extends StatefulWidget {
   const AndrossyFieldExamplePage({super.key});

@@ -1,7 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-
-import '../widgets/gesture.dart';
+import 'package:flutter_androssy_kits/widgets.dart';
 
 class AndrossyGestureExamplePage extends StatefulWidget {
   const AndrossyGestureExamplePage({super.key});
