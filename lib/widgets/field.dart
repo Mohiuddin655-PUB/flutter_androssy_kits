@@ -6,38 +6,131 @@ import 'package:flutter/services.dart';
 
 import 'icon.dart';
 
-typedef OnAndrossyFieldErrorCheck = Future<AndrossyFieldError> Function(
-  String value,
+const _kDefaultBorderWidth = 1.5;
+const _kFocusedBorderWidth = 2.0;
+const _kDefaultCursorWidth = 2.0;
+const _kDefaultDrawablePadding = 12.0;
+const _kDefaultIconSize = 24.0;
+const _kDefaultIndicatorSize = 24.0;
+const _kDefaultIndicatorStrokeWidth = 2.0;
+const _kDefaultScrollPadding = EdgeInsets.all(20.0);
+const _kDefaultFieldPadding = EdgeInsets.symmetric(vertical: 8.0);
+const _kDefaultLabelStyle = TextStyle(
+  fontSize: 12,
+  fontWeight: FontWeight.w500,
 );
+
+bool _hasText(String? value) => value?.isNotEmpty ?? false;
+
+typedef OnAndrossyFieldErrorCheck = Future<AndrossyFieldError> Function(
+    String value);
 typedef OnAndrossyFieldChanged = void Function(String value);
 typedef OnAndrossyFieldError = String? Function(AndrossyFieldError error);
 typedef OnAndrossyFieldValid = void Function(bool value);
 typedef OnAndrossyFieldValidator = bool Function(String value);
 
 typedef AndrossyFieldDrawableBuilder = Widget Function(
-  BuildContext context,
-  AndrossyFieldState state,
-);
+    BuildContext context, AndrossyFieldState state);
 
 typedef AndrossyFieldContextMenuBuilder = Widget Function(
-  BuildContext context,
-  EditableTextState state,
-);
+    BuildContext context, EditableTextState state);
 
 typedef AndrossyFieldPrivateCommandListener = void Function(
-  String value,
-  Map<String, dynamic> params,
-);
+    String value, Map<String, dynamic> params);
 
+typedef AndrossyFieldTapListener = void Function();
 typedef AndrossyFieldVoidListener = void Function();
 typedef AndrossyFieldCheckListener = Function(String tag, bool valid);
 typedef AndrossyFieldSelectionChangeListener = void Function(
-  TextSelection selection,
-  SelectionChangedCause? cause,
-);
+    TextSelection selection, SelectionChangedCause? cause);
 typedef AndrossyFieldSubmitListener = void Function(String value);
 typedef AndrossyFieldTapOutsideListener = void Function(PointerDownEvent event);
+typedef AndrossyFieldTapUpOutsideListener = void Function(PointerUpEvent event);
 
+/// A production-ready text input with Androssy state styling, drawables,
+/// validation, helper/footer text, and the important behavior hooks from
+/// Flutter's [TextField].
+///
+/// Use [AndrossyField] anywhere you would normally use a [TextField] but need
+/// app-level consistency: state-aware colors, icons, async availability checks,
+/// shared form defaults, or a custom footer/counter.
+///
+/// Common use cases:
+///
+/// Basic styled input:
+///
+/// ```dart
+/// AndrossyField(
+///   controller: nameController,
+///   hintText: 'Display name',
+///   inputAction: TextInputAction.next,
+///   inputType: TextInputType.name,
+///   drawableStart: const AndrossyFieldProperty(
+///     enabled: Icons.person_outline,
+///     focused: Icons.person,
+///   ),
+/// )
+/// ```
+///
+/// Async validation with stale-result protection:
+///
+/// ```dart
+/// AndrossyField(
+///   hintText: 'Username',
+///   characters: 'abcdefghijklmnopqrstuvwxyz0123456789_',
+///   minCharacters: 3,
+///   maxCharacters: 18,
+///   loadingText: 'Checking username',
+///   onValidator: (value) => value.length >= 3,
+///   onCheck: (value) async {
+///     final taken = await repository.isUsernameTaken(value);
+///     return taken ? AndrossyFieldError.alreadyFound : AndrossyFieldError.none;
+///   },
+///   onError: (error) => switch (error) {
+///     AndrossyFieldError.alreadyFound => 'Username already taken',
+///     AndrossyFieldError.minimum => 'Too short',
+///     AndrossyFieldError.none => null,
+///     _ => 'Invalid username',
+///   },
+/// )
+/// ```
+///
+/// Password field with a visibility toggle:
+///
+/// ```dart
+/// AndrossyField(
+///   hintText: 'Password',
+///   inputType: TextInputType.visiblePassword,
+///   obscureText: true,
+///   drawableEye: const AndrossyFieldTweenProperty(
+///     inactive: Icons.visibility_off_outlined,
+///     active: Icons.visibility_outlined,
+///   ),
+/// )
+/// ```
+///
+/// Custom counter in the Androssy footer:
+///
+/// ```dart
+/// AndrossyField(
+///   maxCharacters: 140,
+///   maxCharactersAsLimit: false,
+///   counterVisibility: FloatingVisibility.always,
+///   buildCounter: (context, {
+///     required currentLength,
+///     required maxLength,
+///     required isFocused,
+///   }) {
+///     return Text('$currentLength/${maxLength ?? '-'}');
+///   },
+/// )
+/// ```
+///
+/// Keyboard behavior:
+///
+/// [autoDismissKeyboard] defaults to true, so a focused field releases focus
+/// when its route/page becomes inactive or the widget is disposed. Set it to
+/// false only for flows that intentionally keep focus across route transitions.
 class AndrossyField extends StatefulWidget {
   /// GLOBAL PROPERTIES
   final double? width;
@@ -86,7 +179,11 @@ class AndrossyField extends StatefulWidget {
   final Clip? clipBehavior;
   final ContentInsertionConfiguration? contentInsertionConfiguration;
   final AndrossyFieldContextMenuBuilder? contextMenuBuilder;
+  final Object? groupId;
+  final WidgetStatesController? statesController;
+  final TextAlignVertical? textAlignVertical;
   final AndrossyFieldProperty<Color?>? cursorColor;
+  final Color? cursorErrorColor;
   final double? cursorHeight;
   final bool? cursorOpacityAnimates;
   final Radius? cursorRadius;
@@ -95,12 +192,24 @@ class AndrossyField extends StatefulWidget {
   final bool? enableIMEPersonalizedLearning;
   final bool? enableInteractiveSelection;
   final bool? enableSuggestions;
+  final List<Locale>? hintLocales;
+  final bool? ignorePointers;
   final TextMagnifierConfiguration? magnifierConfiguration;
+  final MaxLengthEnforcement? maxLengthEnforcement;
   final MouseCursor? mouseCursor;
+
+  /// Builds a custom counter inside the Androssy footer.
+  ///
+  /// This mirrors [TextField.buildCounter], but is rendered by [_Footer] so it
+  /// works with [counterVisibility], [footerStyle], and Androssy helper/error
+  /// layout instead of Flutter's native [InputDecoration] counter slot.
+  final InputCounterWidgetBuilder? buildCounter;
   final String? obscuringCharacter;
   final bool? scribbleEnabled;
+  final bool? stylusHandwritingEnabled;
   final EdgeInsets? scrollPadding;
   final ScrollPhysics? scrollPhysics;
+  final bool? selectAllOnFocus;
   final TextSelectionControls? selectionControls;
   final BoxHeightStyle? selectionHeightStyle;
   final BoxWidthStyle? selectionWidthStyle;
@@ -116,6 +225,19 @@ class AndrossyField extends StatefulWidget {
   /// LOCAL PROPERTIES
   final bool? enabled;
   final bool? autoDisposeMode;
+
+  /// Releases keyboard focus when the field's route becomes inactive or when
+  /// the widget is disposed.
+  ///
+  /// Defaults to true. Keep it true for normal page navigation so the keyboard
+  /// does not remain open during route transitions. Set false only for custom
+  /// flows that intentionally preserve focus across route changes.
+  final bool? autoDismissKeyboard;
+  final bool? canRequestFocus;
+
+  /// Allowed characters for this field.
+  ///
+  /// When non-empty, input is filtered with [FilteringTextInputFormatter.allow].
   final String? characters;
   final AndrossyFieldProperty? drawableEnd;
   final AndrossyFieldDrawableBuilder? drawableEndBuilder;
@@ -130,8 +252,21 @@ class AndrossyField extends StatefulWidget {
   final String? hintText;
   final Widget? indicator;
   final bool? indicatorVisible;
+
+  /// Characters that should be denied even if other formatters allow them.
   final String? ignorableCharacters;
+
+  /// Maximum visible character count for validation, counter, and optional
+  /// input limiting.
+  ///
+  /// Use [maxCharactersAsLimit] to decide whether this becomes a hard
+  /// [LengthLimitingTextInputFormatter] limit.
   final int? maxCharacters;
+
+  /// Whether [maxCharacters] should be enforced by an input formatter.
+  ///
+  /// Set false for soft-limit fields such as post composers where users may
+  /// type over the limit and see validation/counter feedback.
   final bool? maxCharactersAsLimit;
   final int? minCharacters;
   final List<TextInputFormatter>? inputFormatters;
@@ -156,13 +291,29 @@ class AndrossyField extends StatefulWidget {
   final AndrossyFieldPrivateCommandListener? onAppPrivateCommand;
   final AndrossyFieldVoidListener? onEditingComplete;
   final AndrossyFieldSubmitListener? onSubmitted;
+  final AndrossyFieldTapListener? onTap;
   final AndrossyFieldTapOutsideListener? onTapOutside;
+  final AndrossyFieldTapUpOutsideListener? onTapUpOutside;
+  final bool? onTapAlwaysCalled;
 
   /// CALLBACK LOCAL PROPERTIES
+
+  /// Runs an async validation after local validation succeeds.
+  ///
+  /// Stale async results are ignored automatically when the user changes text
+  /// before a previous check completes.
   final OnAndrossyFieldErrorCheck? onCheck;
   final OnAndrossyFieldChanged? onChanged;
+
+  /// Maps an [AndrossyFieldError] to footer error text.
+  ///
+  /// Return null or an empty string to keep the footer clear.
   final OnAndrossyFieldError? onError;
+
+  /// Emits validity changes after local and async validation state updates.
   final OnAndrossyFieldValid? onValid;
+
+  /// Local synchronous validator used before [onCheck].
   final OnAndrossyFieldValidator? onValidator;
 
   const AndrossyField({
@@ -215,7 +366,11 @@ class AndrossyField extends StatefulWidget {
     this.clipBehavior,
     this.contentInsertionConfiguration,
     this.contextMenuBuilder,
+    this.groupId,
+    this.statesController,
+    this.textAlignVertical,
     this.cursorColor,
+    this.cursorErrorColor,
     this.cursorHeight,
     this.cursorOpacityAnimates,
     this.cursorRadius,
@@ -224,12 +379,18 @@ class AndrossyField extends StatefulWidget {
     this.enableIMEPersonalizedLearning,
     this.enableInteractiveSelection,
     this.enableSuggestions,
+    this.hintLocales,
+    this.ignorePointers,
     this.magnifierConfiguration,
+    this.maxLengthEnforcement,
     this.mouseCursor,
+    this.buildCounter,
     this.obscuringCharacter,
     this.scribbleEnabled,
+    this.stylusHandwritingEnabled,
     this.scrollPadding,
     this.scrollPhysics,
+    this.selectAllOnFocus,
     this.selectionControls,
     this.selectionHeightStyle,
     this.selectionWidthStyle,
@@ -245,6 +406,8 @@ class AndrossyField extends StatefulWidget {
     /// LOCAL PROPERTIES
     this.enabled,
     this.autoDisposeMode,
+    this.autoDismissKeyboard,
+    this.canRequestFocus,
     this.characters,
     this.drawableEnd,
     this.drawableEndBuilder,
@@ -285,7 +448,10 @@ class AndrossyField extends StatefulWidget {
     this.onAppPrivateCommand,
     this.onEditingComplete,
     this.onSubmitted,
+    this.onTap,
     this.onTapOutside,
+    this.onTapUpOutside,
+    this.onTapAlwaysCalled,
 
     /// CALLBACK LOCAL PROPERTIES
     this.onCheck,
@@ -295,6 +461,20 @@ class AndrossyField extends StatefulWidget {
     this.onValidator,
   });
 
+  /// Returns a copy where this field's explicitly provided values win over
+  /// inherited defaults.
+  ///
+  /// This is mainly used by [AndrossyForm] to provide app/section-level field
+  /// defaults without overwriting a child field's local configuration.
+  ///
+  /// ```dart
+  /// final inherited = AndrossyField(
+  ///   hintText: 'Email',
+  /// ).defaultWith(
+  ///   borderColor: const AndrossyFieldProperty.auto(),
+  ///   floatingVisibility: FloatingVisibility.always,
+  /// );
+  /// ```
   AndrossyField defaultWith({
     /// GLOBAL PROPERTIES
     Curve? animationCurve,
@@ -342,7 +522,11 @@ class AndrossyField extends StatefulWidget {
     Clip? clipBehavior,
     ContentInsertionConfiguration? contentInsertionConfiguration,
     AndrossyFieldContextMenuBuilder? contextMenuBuilder,
+    Object? groupId,
+    WidgetStatesController? statesController,
+    TextAlignVertical? textAlignVertical,
     AndrossyFieldProperty<Color?>? cursorColor,
+    Color? cursorErrorColor,
     double? cursorHeight,
     bool? cursorOpacityAnimates,
     Radius? cursorRadius,
@@ -351,12 +535,18 @@ class AndrossyField extends StatefulWidget {
     bool? enableIMEPersonalizedLearning,
     bool? enableInteractiveSelection,
     bool? enableSuggestions,
+    List<Locale>? hintLocales,
+    bool? ignorePointers,
     TextMagnifierConfiguration? magnifierConfiguration,
+    MaxLengthEnforcement? maxLengthEnforcement,
     MouseCursor? mouseCursor,
+    InputCounterWidgetBuilder? buildCounter,
     String? obscuringCharacter,
     bool? scribbleEnabled,
+    bool? stylusHandwritingEnabled,
     EdgeInsets? scrollPadding,
     ScrollPhysics? scrollPhysics,
+    bool? selectAllOnFocus,
     TextSelectionControls? selectionControls,
     BoxHeightStyle? selectionHeightStyle,
     BoxWidthStyle? selectionWidthStyle,
@@ -372,6 +562,8 @@ class AndrossyField extends StatefulWidget {
     /// LOCAL PROPERTIES
     bool? enabled,
     bool? autoDisposeMode,
+    bool? autoDismissKeyboard,
+    bool? canRequestFocus,
     String? characters,
     AndrossyFieldProperty? drawableEnd,
     AndrossyFieldDrawableBuilder? drawableEndBuilder,
@@ -414,7 +606,10 @@ class AndrossyField extends StatefulWidget {
     AndrossyFieldPrivateCommandListener? onAppPrivateCommand,
     AndrossyFieldVoidListener? onEditingComplete,
     AndrossyFieldSubmitListener? onSubmitted,
+    AndrossyFieldTapListener? onTap,
     AndrossyFieldTapOutsideListener? onTapOutside,
+    AndrossyFieldTapUpOutsideListener? onTapUpOutside,
+    bool? onTapAlwaysCalled,
 
     /// CALLBACK LOCAL PROPERTIES
     OnAndrossyFieldErrorCheck? onCheck,
@@ -460,21 +655,26 @@ class AndrossyField extends StatefulWidget {
       indicatorSize: this.indicatorSize ?? indicatorSize,
       indicatorStrokeWidth: this.indicatorStrokeWidth ?? indicatorStrokeWidth,
       indicatorStrokeBackground:
-          indicatorStrokeBackground ?? indicatorStrokeBackground,
+          this.indicatorStrokeBackground ?? indicatorStrokeBackground,
       indicatorStrokeColor: this.indicatorStrokeColor ?? indicatorStrokeColor,
       loadingText: this.loadingText ?? loadingText,
       primaryColor: this.primaryColor ?? primaryColor,
       secondaryColor: this.secondaryColor ?? secondaryColor,
       strutStyle: this.strutStyle ?? strutStyle,
+      underlineColor: this.underlineColor ?? underlineColor,
       underlineHeight: this.underlineHeight ?? underlineHeight,
       width: this.width ?? width,
 
       /// TEXT FIELD GLOBAL PROPERTIES
       clipBehavior: this.clipBehavior ?? clipBehavior,
       contentInsertionConfiguration:
-          contentInsertionConfiguration ?? contentInsertionConfiguration,
+          this.contentInsertionConfiguration ?? contentInsertionConfiguration,
       contextMenuBuilder: this.contextMenuBuilder ?? contextMenuBuilder,
+      groupId: this.groupId ?? groupId,
+      statesController: this.statesController ?? statesController,
+      textAlignVertical: this.textAlignVertical ?? textAlignVertical,
       cursorColor: this.cursorColor ?? cursorColor,
+      cursorErrorColor: this.cursorErrorColor ?? cursorErrorColor,
       cursorHeight: this.cursorHeight ?? cursorHeight,
       cursorOpacityAnimates:
           this.cursorOpacityAnimates ?? cursorOpacityAnimates,
@@ -482,24 +682,31 @@ class AndrossyField extends StatefulWidget {
       cursorWidth: this.cursorWidth ?? cursorWidth,
       dragStartBehavior: this.dragStartBehavior ?? dragStartBehavior,
       enableIMEPersonalizedLearning:
-          enableIMEPersonalizedLearning ?? enableIMEPersonalizedLearning,
+          this.enableIMEPersonalizedLearning ?? enableIMEPersonalizedLearning,
       enableInteractiveSelection:
-          enableInteractiveSelection ?? enableInteractiveSelection,
+          this.enableInteractiveSelection ?? enableInteractiveSelection,
       enableSuggestions: this.enableSuggestions ?? enableSuggestions,
+      hintLocales: this.hintLocales ?? hintLocales,
+      ignorePointers: this.ignorePointers ?? ignorePointers,
       magnifierConfiguration:
           this.magnifierConfiguration ?? magnifierConfiguration,
+      maxLengthEnforcement: this.maxLengthEnforcement ?? maxLengthEnforcement,
       mouseCursor: this.mouseCursor ?? mouseCursor,
+      buildCounter: this.buildCounter ?? buildCounter,
       obscuringCharacter: this.obscuringCharacter ?? obscuringCharacter,
       scribbleEnabled: this.scribbleEnabled ?? scribbleEnabled,
+      stylusHandwritingEnabled:
+          this.stylusHandwritingEnabled ?? stylusHandwritingEnabled,
       scrollPadding: this.scrollPadding ?? scrollPadding,
       scrollPhysics: this.scrollPhysics ?? scrollPhysics,
+      selectAllOnFocus: this.selectAllOnFocus ?? selectAllOnFocus,
       selectionControls: this.selectionControls ?? selectionControls,
       selectionHeightStyle: this.selectionHeightStyle ?? selectionHeightStyle,
       selectionWidthStyle: this.selectionWidthStyle ?? selectionWidthStyle,
       smartDashesType: this.smartDashesType ?? smartDashesType,
       smartQuotesType: this.smartQuotesType ?? smartQuotesType,
       spellCheckConfiguration:
-          spellCheckConfiguration ?? spellCheckConfiguration,
+          this.spellCheckConfiguration ?? spellCheckConfiguration,
       style: this.style ?? style,
       textAlign: this.textAlign ?? textAlign,
       textCapitalization: this.textCapitalization ?? textCapitalization,
@@ -509,6 +716,8 @@ class AndrossyField extends StatefulWidget {
       /// LOCAL PROPERTIES
       enabled: this.enabled ?? enabled,
       autoDisposeMode: this.autoDisposeMode ?? autoDisposeMode,
+      autoDismissKeyboard: this.autoDismissKeyboard ?? autoDismissKeyboard,
+      canRequestFocus: this.canRequestFocus ?? canRequestFocus,
       characters: this.characters ?? characters,
       drawableEnd: this.drawableEnd ?? drawableEnd,
       drawableEndBuilder: this.drawableEndBuilder ?? drawableEndBuilder,
@@ -536,7 +745,7 @@ class AndrossyField extends StatefulWidget {
       autoFocus: this.autoFocus ?? autoFocus,
       controller: this.controller ?? controller,
       expands: this.expands ?? expands,
-      inputAction: this.inputAction ?? inputAction,
+      inputAction: this.inputAction ?? inputAction ?? textInputAction,
       inputType: this.inputType ?? inputType,
       maxLines: this.maxLines ?? maxLines,
       minLines: this.minLines ?? minLines,
@@ -549,7 +758,10 @@ class AndrossyField extends StatefulWidget {
       onAppPrivateCommand: this.onAppPrivateCommand ?? onAppPrivateCommand,
       onEditingComplete: this.onEditingComplete ?? onEditingComplete,
       onSubmitted: this.onSubmitted ?? onSubmitted,
+      onTap: this.onTap ?? onTap,
       onTapOutside: this.onTapOutside ?? onTapOutside,
+      onTapUpOutside: this.onTapUpOutside ?? onTapUpOutside,
+      onTapAlwaysCalled: this.onTapAlwaysCalled ?? onTapAlwaysCalled,
 
       /// CALLBACK LOCAL PROPERTIES
       onCheck: this.onCheck ?? onCheck,
@@ -564,6 +776,20 @@ class AndrossyField extends StatefulWidget {
   State<AndrossyField> createState() => AndrossyFieldState();
 }
 
+/// Runtime controller for an [AndrossyField].
+///
+/// Access it with a `GlobalKey<AndrossyFieldState>` when a form needs to update
+/// helper/error text, read validity, show/hide keyboard, or toggle state from
+/// business logic.
+///
+/// ```dart
+/// final fieldKey = GlobalKey<AndrossyFieldState>();
+///
+/// AndrossyField(key: fieldKey);
+///
+/// fieldKey.currentState?.setErrorText('Try another value');
+/// fieldKey.currentState?.showKeyboard(context);
+/// ```
 class AndrossyFieldState extends State<AndrossyField> {
   /// WIDGET BUILDER START
   ///
@@ -571,159 +797,381 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   late TextEditingController controller;
   late FocusNode _focusNode;
+  late bool _ownsController;
+  late bool _ownsFocusNode;
   bool _widgetInitialized = false;
+  bool _focusListenerAttached = false;
+  String _lastText = '';
+  int _checkSerial = 0;
 
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
     controller = widget.controller ?? TextEditingController();
+    if (widget.text != null) {
+      _setControllerText(widget.text!);
+    }
+    _lastText = controller.text;
+    controller.addListener(_handleControllerChange);
+
+    _ownsFocusNode = widget.focusNode == null;
     _focusNode = widget.focusNode ?? FocusNode();
-    controller.text = widget.text ?? controller.text;
+    _attachFocusListener();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _widgetInitialized = true;
-      addFocusListener();
-      _handleEditingChange(text);
+      _focused = _focusNode.hasFocus;
+      _handleEditingChange(text, markInteracted: false);
     });
   }
 
-  void _dispose() {
-    if (widget.autoDisposeMode ?? false) {
-      removeFocusListener();
+  @override
+  void didUpdateWidget(covariant AndrossyField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    var shouldValidate = false;
+
+    if (oldWidget.controller != widget.controller) {
+      controller.removeListener(_handleControllerChange);
+      final previousController = controller;
+      final previousOwned = _ownsController;
+      final previousText = previousController.text;
+
+      _ownsController = widget.controller == null;
+      controller = widget.controller ??
+          TextEditingController(text: widget.text ?? previousText);
+      if (widget.text != null) {
+        _setControllerText(widget.text!);
+      }
+      _lastText = controller.text;
+      controller.addListener(_handleControllerChange);
+
+      if (previousOwned || (oldWidget.autoDisposeMode ?? false)) {
+        previousController.dispose();
+      }
+      shouldValidate = true;
+    } else if (widget.text != null && widget.text != oldWidget.text) {
+      _setControllerText(widget.text!);
+      shouldValidate = true;
+    }
+
+    if (oldWidget.focusNode != widget.focusNode) {
+      _detachFocusListener();
+      final previousFocusNode = _focusNode;
+      final previousOwned = _ownsFocusNode;
+
+      _ownsFocusNode = widget.focusNode == null;
+      _focusNode = widget.focusNode ?? FocusNode();
+      _focused = _focusNode.hasFocus;
+      _attachFocusListener();
+
+      if (previousOwned || (oldWidget.autoDisposeMode ?? false)) {
+        previousFocusNode.dispose();
+      }
+    }
+
+    if (widget.enabled != oldWidget.enabled && widget.enabled != null) {
+      _enabled = widget.enabled!;
+      if (!_enabled) {
+        _cancelPendingCheck();
+        _focusNode.unfocus();
+      }
+      shouldValidate = true;
+    }
+    if (widget.readOnly != oldWidget.readOnly && widget.readOnly != null) {
+      _readOnly = widget.readOnly!;
+    }
+    if (widget.obscureText != oldWidget.obscureText) {
+      _obscureText = widget.obscureText;
+    }
+    if (widget.floatingText != oldWidget.floatingText) {
+      _floatingText = widget.floatingText;
+    }
+    if (widget.helperText != oldWidget.helperText) {
+      _helperText = widget.helperText;
+    }
+    if (widget.hintText != oldWidget.hintText) {
+      _hintText = widget.hintText;
+    }
+    if (widget.errorText != oldWidget.errorText) {
+      _setLocalErrorText(widget.errorText);
+    }
+    if (widget.indicatorVisible != oldWidget.indicatorVisible) {
+      _indicatorVisible = widget.indicatorVisible ?? false;
+    }
+    if (widget.maxCharacters != oldWidget.maxCharacters) {
+      maxCharacters = widget.maxCharacters ?? 0;
+      shouldValidate = true;
+    }
+    if (widget.minCharacters != oldWidget.minCharacters) {
+      shouldValidate = true;
+    }
+    if (widget.onCheck != oldWidget.onCheck ||
+        widget.onValidator != oldWidget.onValidator) {
+      _cancelPendingCheck();
+      shouldValidate = true;
+    }
+    if (widget.onError != oldWidget.onError) {
+      shouldValidate = true;
+    }
+    if (widget.characters != oldWidget.characters) {
+      characters = widget.characters ?? '';
+    }
+    if (widget.ignorableCharacters != oldWidget.ignorableCharacters) {
+      ignorableCharacters = widget.ignorableCharacters ?? '';
+    }
+    if (widget.maxCharactersAsLimit != oldWidget.maxCharactersAsLimit) {
+      maxCharactersAsLimit = widget.maxCharactersAsLimit ?? true;
+    }
+
+    state = AndrossyFieldPropertyState.from(this);
+
+    if (shouldValidate && _widgetInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handleEditingChange(text, markInteracted: false);
+      });
+    }
+  }
+
+  bool get _disposeExternalResources => widget.autoDisposeMode ?? false;
+
+  bool get _autoDismissKeyboard => widget.autoDismissKeyboard ?? true;
+
+  void _cancelPendingCheck() {
+    _checkSerial++;
+    _checking = false;
+  }
+
+  void _dismissKeyboardIfFocused() {
+    if (_focusNode.hasFocus) _focusNode.unfocus();
+  }
+
+  void _dismissKeyboardForInactiveRoute() {
+    if (!_autoDismissKeyboard || !_focusNode.hasFocus) return;
+
+    final isCurrent = ModalRoute.isCurrentOf(context);
+    final isActive = ModalRoute.isActiveOf(context);
+    if (isCurrent != false && isActive != false) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _dismissKeyboardIfFocused();
+    });
+  }
+
+  void _setControllerText(String value) {
+    if (controller.text == value) return;
+    final offset = controller.selection.baseOffset;
+    final safeOffset =
+        offset < 0 ? value.length : offset.clamp(0, value.length).toInt();
+
+    _lastText = value;
+    controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: safeOffset),
+    );
+  }
+
+  void _disposeOwnedResources() {
+    _cancelPendingCheck();
+    controller.removeListener(_handleControllerChange);
+    _detachFocusListener(clearCallbacks: true);
+
+    if (_ownsController || _disposeExternalResources) {
       controller.dispose();
+    }
+    if (_ownsFocusNode || _disposeExternalResources) {
       _focusNode.dispose();
     }
   }
 
   @override
   void dispose() {
+    _widgetInitialized = false;
+    if (_autoDismissKeyboard) _dismissKeyboardIfFocused();
+    _disposeOwnedResources();
     super.dispose();
-    return _dispose();
   }
 
   late AndrossyFieldPropertyState state = AndrossyFieldPropertyState.from(this);
 
-  late final theme = Theme.of(context);
+  ThemeData get theme => Theme.of(context);
 
-  late final primaryColor = widget.primaryColor ?? theme.primaryColor;
+  Color get primaryColor => widget.primaryColor ?? theme.primaryColor;
 
-  late final errorColor = widget.errorColor ??
+  Color get errorColor =>
+      widget.errorColor ??
       (theme.brightness == Brightness.dark
           ? Colors.red
           : const Color(0xFFFF7769));
 
-  late final secondaryColor = widget.secondaryColor ??
+  Color get secondaryColor =>
+      widget.secondaryColor ??
       (Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF616161)
           : const Color(0xFFBBBBBB));
 
-  late final defaultLabelStyle = const TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-  );
+  TextStyle get defaultLabelStyle => _kDefaultLabelStyle;
 
-  late final defaultFloatingStyle = widget.floatingStyle.use._defaults(
-    enabled: defaultLabelStyle.copyWith(color: secondaryColor),
-    focused: defaultLabelStyle.copyWith(color: primaryColor),
-    disabled: defaultLabelStyle.copyWith(color: secondaryColor),
-    error: defaultLabelStyle.copyWith(color: errorColor),
-  );
+  AndrossyFieldProperty<TextStyle?> get defaultFloatingStyle =>
+      widget.floatingStyle.use._defaults(
+        enabled: defaultLabelStyle.copyWith(color: secondaryColor),
+        focused: defaultLabelStyle.copyWith(color: primaryColor),
+        disabled: defaultLabelStyle.copyWith(color: secondaryColor),
+        error: defaultLabelStyle.copyWith(color: errorColor),
+      );
 
-  late final defaultFooterStyle = widget.footerStyle.use._defaults(
-    enabled: defaultLabelStyle.copyWith(color: secondaryColor),
-    focused: defaultLabelStyle.copyWith(color: primaryColor),
-    disabled: defaultLabelStyle.copyWith(color: secondaryColor),
-    error: defaultLabelStyle.copyWith(color: errorColor),
-  );
+  AndrossyFieldProperty<TextStyle?> get defaultFooterStyle =>
+      widget.footerStyle.use._defaults(
+        enabled: defaultLabelStyle.copyWith(color: secondaryColor),
+        focused: defaultLabelStyle.copyWith(color: primaryColor),
+        disabled: defaultLabelStyle.copyWith(color: secondaryColor),
+        error: defaultLabelStyle.copyWith(color: errorColor),
+      );
 
-  late final defaultBorderColor = widget.borderColor.use._defaults(
-    enabled: primaryColor.withOpacity(0.1),
-    focused: primaryColor,
-    disabled: secondaryColor.withAlpha(20),
-    errorFocused: errorColor,
-    error: errorColor.withOpacity(0.25),
-  );
+  AndrossyFieldProperty<Color?> get defaultBorderColor =>
+      widget.borderColor.use._defaults(
+        enabled: primaryColor.withValues(alpha: 0.1),
+        focused: primaryColor,
+        disabled: secondaryColor.withAlpha(20),
+        errorFocused: errorColor,
+        error: errorColor.withValues(alpha: 0.25),
+      );
 
-  late final defaultCursorColor = AndrossyFieldProperty(
-    enabled: secondaryColor,
-    focused: primaryColor,
-    error: errorColor,
-    disabled: secondaryColor,
-  );
+  AndrossyFieldProperty<Color?> get defaultCursorColor =>
+      widget.cursorColor.use._defaults(
+        enabled: secondaryColor,
+        focused: primaryColor,
+        error: errorColor,
+        disabled: secondaryColor,
+      );
 
-  late final defaultDrawableStartColor = widget.drawableStartTint.use._defaults(
-    enabled: secondaryColor,
-    focused: primaryColor,
-    disabled: secondaryColor,
-    error: errorColor,
-  );
+  Color get cursorColor {
+    if ((isError || hasError) && widget.cursorErrorColor != null) {
+      return widget.cursorErrorColor!;
+    }
+    return defaultCursorColor.fromState(state) ?? primaryColor;
+  }
 
-  late final defaultDrawableEndColor = widget.drawableEndTint.use._defaults(
-    enabled: secondaryColor,
-    focused: primaryColor,
-    disabled: secondaryColor,
-    error: errorColor,
-  );
+  AndrossyFieldProperty<Color?> get defaultDrawableStartColor =>
+      widget.drawableStartTint.use._defaults(
+        enabled: secondaryColor,
+        focused: primaryColor,
+        disabled: secondaryColor,
+        error: errorColor,
+      );
 
-  late final defaultIndicatorColor = widget.indicatorStrokeColor.use._defaults(
-    enabled: secondaryColor,
-    focused: primaryColor,
-    disabled: secondaryColor,
-    error: errorColor,
-  );
+  AndrossyFieldProperty<Color?> get defaultDrawableEndColor =>
+      widget.drawableEndTint.use._defaults(
+        enabled: secondaryColor,
+        focused: primaryColor,
+        disabled: secondaryColor,
+        error: errorColor,
+      );
 
-  late final defaultIndicatorBackgroundColor =
+  AndrossyFieldProperty<Color?> get defaultIndicatorColor =>
+      widget.indicatorStrokeColor.use._defaults(
+        enabled: secondaryColor,
+        focused: primaryColor,
+        disabled: secondaryColor,
+        error: errorColor,
+      );
+
+  AndrossyFieldProperty<Color?> get defaultIndicatorBackgroundColor =>
       widget.indicatorStrokeBackground.use._defaults(
-    enabled: secondaryColor.withAlpha(10),
-    focused: primaryColor.withAlpha(20),
-  );
+        enabled: secondaryColor.withAlpha(10),
+        focused: primaryColor.withAlpha(20),
+      );
 
-  late final defaultUnderlineColor = widget.underlineColor.use._defaults(
-    enabled: secondaryColor,
-    focused: primaryColor,
-    disabled: secondaryColor,
-    error: errorColor,
-  );
+  AndrossyFieldProperty<Color?> get defaultUnderlineColor =>
+      widget.underlineColor.use._defaults(
+        enabled: secondaryColor,
+        focused: primaryColor,
+        disabled: secondaryColor,
+        error: errorColor,
+      );
 
-  late final animationCurve = widget.animationCurve ?? Curves.linear;
+  Curve get animationCurve => widget.animationCurve ?? Curves.linear;
 
-  late final animationDuration = widget.animationDuration;
+  Duration? get animationDuration => widget.animationDuration;
 
-  late final indicatorSize = widget.indicatorSize ?? 24;
+  double get indicatorSize => widget.indicatorSize ?? _kDefaultIndicatorSize;
 
-  Border? _border(AndrossyFieldPropertyState state) {
-    if (widget.borderColor?._none ?? false) return null;
-    final borderWidth = widget.borderWidth;
-    final normalWidth = borderWidth?.inactive ?? 1.5;
-    final focusedWidth = borderWidth?.active ?? 2.0;
-    return Border.all(
-      color: defaultBorderColor.fromState(state) ?? Colors.grey,
-      width: isFocused ? focusedWidth : normalWidth,
+  double get _inactiveBorderWidth {
+    return widget.borderWidth?.inactive ?? _kDefaultBorderWidth;
+  }
+
+  double get _activeBorderWidth {
+    return widget.borderWidth?.active ?? _kFocusedBorderWidth;
+  }
+
+  double get _reservedBorderWidth {
+    final inactive = _inactiveBorderWidth;
+    final active = _activeBorderWidth;
+    return active > inactive ? active : inactive;
+  }
+
+  bool get _usesStableDefaultBorder {
+    return isUnderlineHide &&
+        widget.decoration == null &&
+        !(widget.borderColor?._none ?? false);
+  }
+
+  EdgeInsets get _effectiveContentPadding {
+    final padding = widget.contentPadding ?? _kDefaultFieldPadding;
+    if (!_usesStableDefaultBorder) return padding;
+    final borderWidth = _reservedBorderWidth;
+    return EdgeInsets.fromLTRB(
+      padding.left + borderWidth,
+      padding.top + borderWidth,
+      padding.right + borderWidth,
+      padding.bottom + borderWidth,
     );
   }
 
-  late final TextStyle _style = widget.style ?? const TextStyle();
+  Border? _border(AndrossyFieldPropertyState state) {
+    if (widget.borderColor?._none ?? false) return null;
+    return Border.all(
+      color: defaultBorderColor.fromState(state) ?? Colors.grey,
+      width: isFocused ? _activeBorderWidth : _inactiveBorderWidth,
+    );
+  }
 
-  late TextStyle style = _style.copyWith(
-    fontSize: widget.style?.fontSize ?? 18,
-    height: 1.2,
-    color: isEnabled ? null : _style.color?.withAlpha(150),
-  );
+  TextStyle get _style => widget.style ?? const TextStyle();
 
-  late TextStyle hintStyle = style.copyWith(
-    color: text.isNotEmpty
-        ? Colors.transparent
-        : widget.hintColor ?? secondaryColor.withAlpha(100),
-  );
+  TextStyle get style {
+    final base = _style;
+    return base.copyWith(
+      fontSize: base.fontSize ?? 18,
+      height: base.height ?? 1.2,
+      color: isEnabled ? base.color : base.color?.withAlpha(150),
+    );
+  }
 
-  Widget defaultIndicator(AndrossyFieldPropertyState state) {
+  TextStyle get hintStyle {
+    return style.copyWith(
+      color: text.isNotEmpty
+          ? Colors.transparent
+          : widget.hintColor ?? secondaryColor.withAlpha(100),
+    );
+  }
+
+  Widget defaultIndicator(
+    AndrossyFieldPropertyState state, [
+    IndicatorAlignment? alignment,
+  ]) {
     final defaultColor = defaultIndicatorColor.fromState(state);
     return Container(
       width: indicatorSize,
       height: indicatorSize,
       padding: EdgeInsets.all(indicatorSize * 0.05),
-      margin: drawableEndSpace,
+      margin: (alignment ?? indicatorAlignment).isStart
+          ? drawableStartSpace
+          : drawableEndSpace,
       child: CircularProgressIndicator(
-        strokeWidth: widget.indicatorStrokeWidth ?? 2,
+        strokeWidth:
+            widget.indicatorStrokeWidth ?? _kDefaultIndicatorStrokeWidth,
         color: defaultColor,
         strokeCap: StrokeCap.round,
         backgroundColor: defaultIndicatorBackgroundColor.fromState(state) ??
@@ -732,137 +1180,169 @@ class AndrossyFieldState extends State<AndrossyField> {
     );
   }
 
-  Widget _attach(BuildContext context, AndrossyFieldPropertyState state) {
-    var mHintStyle = style.copyWith(
-      color: text.isNotEmpty
-          ? Colors.transparent
-          : widget.hintColor ?? secondaryColor.withAlpha(100),
+  Widget _indicator(AndrossyFieldPropertyState state, IndicatorAlignment side) {
+    final indicator = widget.indicator;
+    if (indicator == null) {
+      return defaultIndicator(state, side);
+    }
+    return Padding(
+      padding: side.isStart ? drawableStartSpace : drawableEndSpace,
+      child: indicator,
     );
+  }
 
+  Widget _attach(BuildContext context, AndrossyFieldPropertyState state) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.center,
       textDirection: widget.textDirection,
       children: [
-        if (isIndicatorVisible && indicatorAlignment.isStart)
-          defaultIndicator(state)
-        else if (widget.drawableStartBuilder != null)
-          widget.drawableStartBuilder!(context, this)
-        else
-          _Icon(
-            animationCurve: animationCurve,
-            animationDuration: animationDuration,
-            visibility: drawableStart != null,
-            icon: drawableStart,
-            size: drawableStartSize,
-            tint: defaultDrawableStartColor.fromState(state),
-            margin: drawableStartSpace,
-          ),
-        Expanded(
-          child: TextField(
-            canRequestFocus: true,
-            enabled: isEnabled,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              isDense: true,
-              isCollapsed: true,
-              hintText: hintText,
-              hintStyle: mHintStyle,
-              hintTextDirection: widget.textDirection,
-            ),
-            autocorrect: widget.autocorrect ?? true,
-            autofillHints: widget.autofillHints,
-            autofocus: widget.autoFocus ?? false,
-            clipBehavior: widget.clipBehavior ?? Clip.hardEdge,
-            controller: controller,
-            cursorColor: defaultCursorColor.fromState(state) ?? primaryColor,
-            cursorHeight: widget.cursorHeight,
-            cursorOpacityAnimates: widget.cursorOpacityAnimates,
-            cursorRadius: widget.cursorRadius,
-            cursorWidth: widget.cursorWidth ?? 2,
-            contentInsertionConfiguration: widget.contentInsertionConfiguration,
-            contextMenuBuilder: widget.contextMenuBuilder,
-            dragStartBehavior:
-                widget.dragStartBehavior ?? DragStartBehavior.start,
-            enableIMEPersonalizedLearning:
-                widget.enableIMEPersonalizedLearning ?? true,
-            enableInteractiveSelection: widget.enableInteractiveSelection,
-            enableSuggestions: widget.enableSuggestions ?? true,
-            expands: widget.expands ?? false,
-            focusNode: _focusNode,
-            inputFormatters: _formatter,
-            keyboardAppearance: widget.keyboardAppearance,
-            keyboardType: widget.inputType,
-            maxLines: maxLines,
-            magnifierConfiguration: widget.magnifierConfiguration,
-            maxLength: null,
-            minLines: widget.minLines,
-            mouseCursor: widget.mouseCursor,
-            obscureText: obscureText,
-            obscuringCharacter: widget.obscuringCharacter ?? '•',
-            onAppPrivateCommand: onAppPrivateCommand,
-            onChanged: _handleEditingChange,
-            onEditingComplete: onEditingComplete,
-            onSubmitted: onSubmitted,
-            onTapOutside: onTapOutside,
-            readOnly: isReadMode,
-            restorationId: widget.restorationId,
-            scribbleEnabled: widget.scribbleEnabled ?? true,
-            scrollController: widget.scrollController,
-            scrollPadding: widget.scrollPadding ?? const EdgeInsets.all(20.0),
-            scrollPhysics: widget.scrollPhysics,
-            selectionControls: widget.selectionControls,
-            selectionHeightStyle:
-                widget.selectionHeightStyle ?? BoxHeightStyle.tight,
-            selectionWidthStyle:
-                widget.selectionWidthStyle ?? BoxWidthStyle.tight,
-            showCursor: widget.showCursor,
-            smartDashesType: widget.smartDashesType,
-            smartQuotesType: widget.smartQuotesType,
-            spellCheckConfiguration: widget.spellCheckConfiguration,
-            strutStyle: widget.strutStyle,
-            style: style,
-            textAlign: widget.textAlign ?? TextAlign.start,
-            textCapitalization:
-                widget.textCapitalization ?? TextCapitalization.none,
-            textDirection: widget.textDirection,
-            textInputAction: widget.inputAction,
-            undoController: widget.undoController,
-          ),
-        ),
-        if (isIndicatorVisible && indicatorAlignment.isEnd)
-          defaultIndicator(state)
-        else if (widget.drawableEndBuilder != null)
-          widget.drawableEndBuilder!(context, this)
-        else
-          _Icon(
-            animationCurve: animationCurve,
-            animationDuration: animationDuration,
-            visibility: drawableEnd != null,
-            icon: drawableEnd,
-            size: drawableEndSize,
-            tint: defaultDrawableEndColor.fromState(state),
-            margin: drawableEndSpace,
-            onToggleClick: widget.drawableEye != null ? onChangeEye : null,
-          ),
+        _leading(context, state),
+        _input(state),
+        _trailing(context, state),
       ],
     );
   }
 
+  Widget _leading(BuildContext context, AndrossyFieldPropertyState state) {
+    if (isIndicatorVisible && indicatorAlignment.isStart) {
+      return _indicator(state, IndicatorAlignment.start);
+    }
+    if (drawableStartVisible && widget.drawableStartBuilder != null) {
+      return widget.drawableStartBuilder!(context, this);
+    }
+    return _Icon(
+      animationCurve: animationCurve,
+      animationDuration: animationDuration,
+      visibility: drawableStartVisible && drawableStart != null,
+      icon: drawableStart,
+      size: drawableStartSize,
+      tint: defaultDrawableStartColor.fromState(state),
+      margin: drawableStartSpace,
+    );
+  }
+
+  Widget _input(AndrossyFieldPropertyState state) {
+    return Expanded(
+      child: TextField(
+        canRequestFocus: canRequestKeyboardFocus,
+        enabled: isEnabled,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+          isDense: true,
+          isCollapsed: true,
+          hintText: hintText,
+          hintStyle: hintStyle,
+          hintTextDirection: widget.textDirection,
+        ),
+        autocorrect: widget.autocorrect ?? true,
+        autofillHints: widget.autofillHints,
+        autofocus: widget.autoFocus ?? false,
+        clipBehavior: widget.clipBehavior ?? Clip.hardEdge,
+        controller: controller,
+        cursorColor: cursorColor,
+        cursorErrorColor: widget.cursorErrorColor,
+        cursorHeight: widget.cursorHeight,
+        cursorOpacityAnimates: widget.cursorOpacityAnimates,
+        cursorRadius: widget.cursorRadius,
+        cursorWidth: widget.cursorWidth ?? _kDefaultCursorWidth,
+        contentInsertionConfiguration: widget.contentInsertionConfiguration,
+        contextMenuBuilder: widget.contextMenuBuilder,
+        dragStartBehavior: widget.dragStartBehavior ?? DragStartBehavior.start,
+        enableIMEPersonalizedLearning:
+            widget.enableIMEPersonalizedLearning ?? true,
+        enableInteractiveSelection: widget.enableInteractiveSelection,
+        enableSuggestions: widget.enableSuggestions ?? true,
+        expands: widget.expands ?? false,
+        focusNode: _focusNode,
+        groupId: widget.groupId ?? EditableText,
+        hintLocales: widget.hintLocales,
+        ignorePointers: widget.ignorePointers,
+        inputFormatters: _formatter,
+        keyboardAppearance: widget.keyboardAppearance,
+        keyboardType: widget.inputType,
+        maxLengthEnforcement: widget.maxLengthEnforcement,
+        maxLines: maxLines,
+        magnifierConfiguration: widget.magnifierConfiguration,
+        maxLength: null,
+        minLines: minLines,
+        mouseCursor: widget.mouseCursor,
+        obscureText: obscureText,
+        obscuringCharacter: widget.obscuringCharacter ?? '•',
+        onAppPrivateCommand: onAppPrivateCommand,
+        onChanged: _handleUserEditingChange,
+        onEditingComplete: onEditingComplete,
+        onSubmitted: onSubmitted,
+        onTap: onTap,
+        onTapAlwaysCalled: widget.onTapAlwaysCalled ?? false,
+        onTapOutside: onTapOutside,
+        onTapUpOutside: onTapUpOutside,
+        readOnly: isReadMode,
+        restorationId: widget.restorationId,
+        statesController: widget.statesController,
+        stylusHandwritingEnabled: widget.stylusHandwritingEnabled ??
+            widget.scribbleEnabled ??
+            EditableText.defaultStylusHandwritingEnabled,
+        scrollController: widget.scrollController,
+        scrollPadding: widget.scrollPadding ?? _kDefaultScrollPadding,
+        scrollPhysics: widget.scrollPhysics,
+        selectAllOnFocus: widget.selectAllOnFocus,
+        selectionControls: widget.selectionControls,
+        selectionHeightStyle:
+            widget.selectionHeightStyle ?? BoxHeightStyle.tight,
+        selectionWidthStyle: widget.selectionWidthStyle ?? BoxWidthStyle.tight,
+        showCursor: widget.showCursor,
+        smartDashesType: widget.smartDashesType,
+        smartQuotesType: widget.smartQuotesType,
+        spellCheckConfiguration: widget.spellCheckConfiguration,
+        strutStyle: widget.strutStyle,
+        style: style,
+        textAlign: widget.textAlign ?? TextAlign.start,
+        textAlignVertical: widget.textAlignVertical,
+        textCapitalization:
+            widget.textCapitalization ?? TextCapitalization.none,
+        textDirection: widget.textDirection,
+        textInputAction: widget.inputAction,
+        undoController: widget.undoController,
+      ),
+    );
+  }
+
+  Widget _trailing(BuildContext context, AndrossyFieldPropertyState state) {
+    if (isIndicatorVisible && indicatorAlignment.isEnd) {
+      return _indicator(state, IndicatorAlignment.end);
+    }
+    if (drawableEndVisible && widget.drawableEndBuilder != null) {
+      return widget.drawableEndBuilder!(context, this);
+    }
+    return _Icon(
+      animationCurve: animationCurve,
+      animationDuration: animationDuration,
+      visibility: drawableEndVisible && drawableEnd != null,
+      icon: drawableEnd,
+      size: drawableEndSize,
+      tint: defaultDrawableEndColor.fromState(state),
+      margin: drawableEndSpace,
+      onToggleClick: widget.drawableEye != null ? onChangeEye : null,
+    );
+  }
+
   Widget _decorate(Widget child) {
+    final borderRadius = widget.borderRadius?.fromState(state);
     final decoration = isUnderlineHide
         ? widget.decoration?.fromState(state) ??
             BoxDecoration(
-              border: _border(state),
-              borderRadius: widget.borderRadius?.fromState(state),
+              borderRadius: borderRadius,
               color: widget.backgroundColor?.fromState(state) ??
                   Colors.transparent,
             )
         : null;
+    final foregroundDecoration = _usesStableDefaultBorder
+        ? BoxDecoration(border: _border(state), borderRadius: borderRadius)
+        : null;
     final clipBehavior = isUnderlineHide ? Clip.antiAlias : Clip.none;
-    final padding =
-        widget.contentPadding ?? const EdgeInsets.symmetric(vertical: 8);
+    final padding = _effectiveContentPadding;
     final color = isUnderlineHide ? null : Colors.transparent;
 
     if (animationDuration != null) {
@@ -874,6 +1354,7 @@ class AndrossyFieldState extends State<AndrossyField> {
         color: color,
         constraints: widget.constraints,
         decoration: decoration,
+        foregroundDecoration: foregroundDecoration,
         clipBehavior: clipBehavior,
         padding: padding,
         child: child,
@@ -883,6 +1364,7 @@ class AndrossyFieldState extends State<AndrossyField> {
         width: widget.width,
         height: widget.height,
         decoration: decoration,
+        foregroundDecoration: foregroundDecoration,
         clipBehavior: clipBehavior,
         color: color,
         constraints: widget.constraints,
@@ -894,6 +1376,8 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   @override
   Widget build(BuildContext context) {
+    _dismissKeyboardForInactiveRoute();
+
     final floatingVisible = this.floatingVisible;
     final underlineVisible = !isUnderlineHide;
     final footerVisible = this.footerVisible;
@@ -902,7 +1386,8 @@ class AndrossyFieldState extends State<AndrossyField> {
     final visible = floatingVisible || footerVisible || underlineVisible;
 
     Widget child = GestureDetector(
-      onTap: () => showKeyboard(context),
+      behavior: HitTestBehavior.translucent,
+      onTap: _canRequestKeyboardFromTap ? () => showKeyboard(context) : null,
       child: _decorate(_attach(context, state)),
     );
 
@@ -941,6 +1426,9 @@ class AndrossyFieldState extends State<AndrossyField> {
                   footerAlignment: footerAlignment,
                   textAlign: widget.textAlign,
                   counter: counter,
+                  buildCounter: widget.buildCounter,
+                  currentLength: currentLength,
+                  maxLength: counterMaxLength,
                   errorText: errorText,
                   helperText: isIndicatorVisible
                       ? widget.loadingText ?? ""
@@ -975,7 +1463,15 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   bool get isEnabled => _enabled;
 
-  bool _error = false;
+  bool get canRequestKeyboardFocus {
+    return isEnabled && (widget.canRequestFocus ?? true);
+  }
+
+  bool get _canRequestKeyboardFromTap {
+    return canRequestKeyboardFocus && widget.ignorePointers != true;
+  }
+
+  late bool _error = _hasText(widget.errorText);
 
   bool get isError => _error;
 
@@ -989,9 +1485,10 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   bool _valid = false;
 
-  bool get validate => onValidator != null ? onValidator!(text) : true;
+  bool get validate => _validateText(text);
 
-  bool get isChecked => onCheck != null ? validate && _valid : true;
+  bool get isChecked =>
+      onCheck != null ? !_checking && validate && _valid : true;
 
   bool get isValid => validate && _valid;
 
@@ -1014,11 +1511,18 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   late int maxCharacters = widget.maxCharacters ?? 0;
 
+  int _textLength(String value) => value.characters.length;
+
+  bool _validateText(String value) {
+    final validator = onValidator;
+    return validator != null ? validator(value) : true;
+  }
+
   AndrossyFieldError errorType(String text, [bool? valid]) {
-    if (text.isEmpty && !_initial) {
-      return AndrossyFieldError.empty;
+    if (text.isEmpty) {
+      return _initial ? AndrossyFieldError.none : AndrossyFieldError.empty;
     } else if (!(valid ?? _valid)) {
-      final length = text.length;
+      final length = _textLength(text);
       if (maxCharacters > 0 && maxCharacters < length) {
         return AndrossyFieldError.maximum;
       } else if ((widget.minCharacters ?? 0) > 0 &&
@@ -1045,85 +1549,141 @@ class AndrossyFieldState extends State<AndrossyField> {
     }
   }
 
-  final List<String> _queues = [];
+  bool _checking = false;
 
-  void _checker(String value) {
-    if (_indicatorVisible) {
-      _queues.add(value);
-      return;
+  Future<void> _checker(
+    String value,
+    int ticket,
+    OnAndrossyFieldErrorCheck check,
+  ) async {
+    AndrossyFieldError futureError;
+    try {
+      futureError = await check(value);
+    } catch (_) {
+      futureError = AndrossyFieldError.error;
     }
-    _indicatorVisible = true;
-    onCheck?.call(value).then((futureError) {
-      _indicatorVisible = false;
-      if (_queues.isNotEmpty) {
-        final proxy = _queues.last;
-        _queues.clear();
-        _checker(proxy);
-      } else {
-        notify(() {
-          _valid = validate;
-          if (_valid) {
-            final x = _valid;
-            _valid = futureError.isOk && x;
-            _error = !futureError.isOk && text.isNotEmpty && x;
-            if (onValid != null) onValid!(_valid);
-            if (onError != null) {
-              if (_error) {
-                errorText = onError!(futureError) ?? "";
-              } else {
-                errorText = onError!(errorType(value, _valid)) ?? "";
-              }
-            }
-          }
-        });
-      }
+
+    if (!mounted || ticket != _checkSerial || value != text) return;
+
+    final locallyValid = _validateText(value);
+    final nextValid = locallyValid && futureError.isOk;
+    final nextError = locallyValid && !futureError.isOk && value.isNotEmpty;
+    final nextErrorType = nextValid
+        ? AndrossyFieldError.none
+        : locallyValid
+            ? futureError
+            : errorType(value, locallyValid);
+    final nextErrorText = _resolveErrorText(nextErrorType);
+
+    notify(() {
+      _checking = false;
+      _valid = nextValid;
+      _error = nextError;
+      errorText = nextErrorText;
     });
+    _emitValidity(nextValid);
   }
 
-  void _handleEditingChange(String value) {
-    _initial = false;
-    _valid = false;
-    _error = false;
-    errorText = "";
-    if (onChange != null) onChange!(value);
-    if (onValid != null || onError != null || onCheck != null) {
-      _valid = validate;
-      if (_valid && onCheck != null && !_initial) {
-        _valid = false;
-        _error = false;
-        _checker(value);
-      } else {
-        _indicatorVisible = false;
-        _valid = _valid && isChecked;
-        _error = !_valid && text.isNotEmpty;
-        if (onValid != null) onValid!(_valid);
-        if (onError != null) {
-          errorText = onError!(errorType(value, _valid)) ?? "";
-        }
-      }
+  void _handleControllerChange() {
+    final value = controller.text;
+    if (value == _lastText) return;
+    _lastText = value;
+    _handleEditingChange(value);
+  }
+
+  void _handleUserEditingChange(String value) {
+    onChange?.call(value);
+    final currentValue = controller.text;
+    if (currentValue != _lastText) {
+      _lastText = currentValue;
+      _handleEditingChange(currentValue);
     }
+  }
+
+  void _handleEditingChange(String value, {bool markInteracted = true}) {
+    if (markInteracted) _initial = false;
+
+    final check = onCheck;
+    final locallyValid = _validateText(value);
+    final shouldCheck =
+        locallyValid && check != null && (!isInitial || value.isNotEmpty);
+
+    _valid = shouldCheck ? false : locallyValid;
+    _error = !shouldCheck && !locallyValid && value.isNotEmpty;
+    errorText = "";
+
+    if (shouldCheck) {
+      final ticket = ++_checkSerial;
+      _checking = true;
+      _emitValidity(false);
+      _checker(value, ticket, check);
+    } else {
+      _cancelPendingCheck();
+      _emitValidity(_valid);
+      errorText = _resolveErrorText(errorType(value, _valid));
+    }
+
     notify();
   }
 
+  void _emitValidity(bool value) {
+    final listener = onValid;
+    listener?.call(value);
+  }
+
+  String _resolveErrorText(AndrossyFieldError error) {
+    final listener = onError;
+    return listener?.call(error) ?? "";
+  }
+
+  final Set<VoidCallback> _focusCallbacks = <VoidCallback>{};
+
+  void _handleFocusNodeEvent() {
+    _handleFocusChange();
+    for (final callback in List<VoidCallback>.of(_focusCallbacks)) {
+      callback();
+    }
+  }
+
+  void _attachFocusListener() {
+    if (_focusListenerAttached) return;
+    _focusNode.addListener(_handleFocusNodeEvent);
+    _focusListenerAttached = true;
+  }
+
+  void _detachFocusListener({bool clearCallbacks = false}) {
+    if (_focusListenerAttached) {
+      _focusNode.removeListener(_handleFocusNodeEvent);
+      _focusListenerAttached = false;
+    }
+    if (clearCallbacks) _focusCallbacks.clear();
+  }
+
   void addFocusListener([VoidCallback? callback]) {
-    _focusNode.addListener(() {
-      _handleFocusChange();
-      if (callback != null) callback();
-    });
+    if (callback != null) _focusCallbacks.add(callback);
+    _attachFocusListener();
   }
 
   void removeFocusListener([VoidCallback? callback]) {
-    _focusNode.removeListener(() {
-      _handleFocusChange();
-      if (callback != null) callback();
-    });
+    if (callback != null) {
+      _focusCallbacks.remove(callback);
+    } else {
+      _detachFocusListener(clearCallbacks: true);
+    }
   }
 
   void showKeyboard(BuildContext context) {
+    if (!canRequestKeyboardFocus) return;
     FocusScope.of(context).requestFocus(_focusNode);
   }
 
-  void hideKeyboard(BuildContext context) => FocusScope.of(context).unfocus();
+  void hideKeyboard(BuildContext context) {
+    if (_focusNode.hasFocus) {
+      _focusNode.unfocus();
+    } else {
+      FocusScope.of(context).unfocus();
+    }
+  }
 
   ///
   ///
@@ -1135,21 +1695,31 @@ class AndrossyFieldState extends State<AndrossyField> {
   ///
 
   void update() {
-    if (_widgetInitialized) {
-      _handleEditingChange(text);
-    }
+    if (mounted) _handleEditingChange(text);
   }
 
   void notify([VoidCallback? callback]) {
-    if (_widgetInitialized) {
-      setState(() {
-        if (callback != null) callback();
-        state = AndrossyFieldPropertyState.from(this);
-      });
+    if (!mounted) return;
+
+    if (!_widgetInitialized) {
+      callback?.call();
+      state = AndrossyFieldPropertyState.from(this);
+      return;
     }
+
+    setState(() {
+      callback?.call();
+      state = AndrossyFieldPropertyState.from(this);
+    });
   }
 
-  void setEnabled(bool value) => notify(() => _enabled = value);
+  void setEnabled(bool value) {
+    if (!value) {
+      _cancelPendingCheck();
+      _focusNode.unfocus();
+    }
+    notify(() => _enabled = value);
+  }
 
   void setError(bool value) => notify(() => _error = value);
 
@@ -1166,6 +1736,10 @@ class AndrossyFieldState extends State<AndrossyField> {
   bool get activated => isFocused;
 
   int? get maxLines {
+    if (widget.expands ?? false) return null;
+    if (obscureText) return 1;
+    if (widget.maxLines != null) return widget.maxLines;
+
     switch (widget.inputType) {
       case TextInputType.datetime:
       case TextInputType.emailAddress:
@@ -1182,6 +1756,8 @@ class AndrossyFieldState extends State<AndrossyField> {
         return null;
     }
   }
+
+  int? get minLines => (widget.expands ?? false) ? null : widget.minLines;
 
   String get text => controller.text;
 
@@ -1253,7 +1829,7 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   String get helperText => _helperText ?? '';
 
-  set helperText(String? value) => _hintText = value;
+  set helperText(String? value) => _helperText = value;
 
   void setHelperText(String? value) => notify(() => _helperText = value);
 
@@ -1265,7 +1841,7 @@ class AndrossyFieldState extends State<AndrossyField> {
     notify(() => _hintText = value);
   }
 
-  bool get isIndicatorVisible => onCheck != null && _indicatorVisible;
+  bool get isIndicatorVisible => isEnabled && (_indicatorVisible || _checking);
 
   late bool _indicatorVisible = widget.indicatorVisible ?? false;
 
@@ -1287,6 +1863,8 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   /// DRAWABLE PROPERTIES
 
+  bool get drawableEndVisible => widget.drawableEndVisible ?? true;
+
   dynamic get drawableEnd {
     if (widget.drawableEye != null) {
       return widget.drawableEye?.detect(obscureText);
@@ -1294,46 +1872,49 @@ class AndrossyFieldState extends State<AndrossyField> {
     return widget.drawableEnd?.fromState(state);
   }
 
-  late final _drawableEndSize =
-      widget.drawableEndSize ?? const AndrossyFieldProperty.all(24);
-
   double get drawableEndSize {
-    return _drawableEndSize.fromState(state) ?? 24;
+    final property = widget.drawableEndSize ??
+        const AndrossyFieldProperty.all(_kDefaultIconSize);
+    return property.fromState(state) ?? _kDefaultIconSize;
   }
 
   EdgeInsets get drawableEndSpace {
     final isRTL = widget.textDirection == TextDirection.rtl;
-    final space = widget.drawableEndPadding?.fromState(state) ?? 12;
-    return EdgeInsets.only(
-      left: !isRTL ? space : 0,
-      right: isRTL ? space : 0,
-    );
+    final space =
+        widget.drawableEndPadding?.fromState(state) ?? _kDefaultDrawablePadding;
+    return EdgeInsets.only(left: !isRTL ? space : 0, right: isRTL ? space : 0);
   }
 
   dynamic get drawableStart {
     return widget.drawableStart?.fromState(state);
   }
 
+  bool get drawableStartVisible => widget.drawableStartVisible ?? true;
+
   double get drawableStartSize {
-    return widget.drawableStartSize?.fromState(state) ?? 24;
+    return widget.drawableStartSize?.fromState(state) ?? _kDefaultIconSize;
   }
 
   EdgeInsets get drawableStartSpace {
     final isRTL = widget.textDirection == TextDirection.rtl;
-    final space = widget.drawableStartPadding?.fromState(state) ?? 12;
-    return EdgeInsets.only(
-      left: isRTL ? space : 0,
-      right: !isRTL ? space : 0,
-    );
+    final space = widget.drawableStartPadding?.fromState(state) ??
+        _kDefaultDrawablePadding;
+    return EdgeInsets.only(left: isRTL ? space : 0, right: !isRTL ? space : 0);
   }
 
   late String? errorText = widget.errorText;
 
-  void setErrorText(String? value) {
-    notify(() => errorText = value);
+  void _setLocalErrorText(String? value) {
+    errorText = value;
+    _error = _hasText(value);
+    if (_error) _valid = false;
   }
 
-  bool get hasError => (errorText ?? "").isNotEmpty;
+  void setErrorText(String? value) {
+    notify(() => _setLocalErrorText(value));
+  }
+
+  bool get hasError => _hasText(errorText);
 
   late bool? _obscureText = widget.obscureText;
 
@@ -1347,9 +1928,12 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   dynamic get iStart => drawableStart?.drawable(isFocused);
 
+  int get currentLength => _textLength(text);
+
+  int? get counterMaxLength => maxCharacters == 0 ? null : maxCharacters;
+
   String get counter {
-    var currentLength = text.length;
-    final maxLength = maxCharacters;
+    final maxLength = counterMaxLength ?? 0;
     return maxLength > 0
         ? '$currentLength / $maxLength'
         : currentLength > 0
@@ -1366,14 +1950,17 @@ class AndrossyFieldState extends State<AndrossyField> {
       ...?widget.inputFormatters,
       if (characters.isNotEmpty)
         FilteringTextInputFormatter.allow(
-          RegExp("[${widget.characters}]"),
+          RegExp("[${RegExp.escape(characters)}]"),
         ),
       if (ignorableCharacters.isNotEmpty)
         FilteringTextInputFormatter.deny(
-          RegExp("[${widget.ignorableCharacters}]"),
+          RegExp("[${RegExp.escape(ignorableCharacters)}]"),
         ),
       if (maxCharactersAsLimit && maxCharacters > 0)
-        LengthLimitingTextInputFormatter(widget.maxCharacters),
+        LengthLimitingTextInputFormatter(
+          maxCharacters,
+          maxLengthEnforcement: widget.maxLengthEnforcement,
+        ),
     ];
   }
 
@@ -1385,11 +1972,24 @@ class AndrossyFieldState extends State<AndrossyField> {
 
   OnAndrossyFieldError? get onError => isEnabled ? widget.onError : null;
 
-  late OnAndrossyFieldValid? _onValid = widget.onValid;
+  OnAndrossyFieldValid? _onValid;
 
-  OnAndrossyFieldValid? get onValid => isEnabled ? _onValid : null;
+  OnAndrossyFieldValid? get onValid {
+    if (!isEnabled) return null;
 
-  void setOnValidListener(OnAndrossyFieldValid value) => _onValid = value;
+    final widgetListener = widget.onValid;
+    final stateListener = _onValid;
+    if (widgetListener == null) return stateListener;
+    if (stateListener == null || identical(widgetListener, stateListener)) {
+      return widgetListener;
+    }
+    return (value) {
+      widgetListener(value);
+      stateListener(value);
+    };
+  }
+
+  void setOnValidListener(OnAndrossyFieldValid? value) => _onValid = value;
 
   OnAndrossyFieldValidator? get onValidator {
     return isEnabled ? widget.onValidator : null;
@@ -1407,8 +2007,16 @@ class AndrossyFieldState extends State<AndrossyField> {
     return isEnabled ? widget.onSubmitted : null;
   }
 
+  AndrossyFieldTapListener? get onTap {
+    return isEnabled ? widget.onTap : null;
+  }
+
   AndrossyFieldTapOutsideListener? get onTapOutside {
     return isEnabled ? widget.onTapOutside : null;
+  }
+
+  AndrossyFieldTapUpOutsideListener? get onTapUpOutside {
+    return isEnabled ? widget.onTapUpOutside : null;
   }
 }
 
@@ -1422,6 +2030,9 @@ class _Footer extends StatelessWidget {
   final MainAxisAlignment footerAlignment;
   final TextAlign? textAlign;
   final String? counter;
+  final InputCounterWidgetBuilder? buildCounter;
+  final int currentLength;
+  final int? maxLength;
   final String? errorText;
   final String helperText;
   final TextStyle? footerTextStyle;
@@ -1440,6 +2051,9 @@ class _Footer extends StatelessWidget {
     required this.footerAlignment,
     required this.textAlign,
     required this.counter,
+    required this.buildCounter,
+    required this.currentLength,
+    required this.maxLength,
     required this.errorText,
     required this.helperText,
     required this.footerTextStyle,
@@ -1487,6 +2101,40 @@ class _Footer extends StatelessWidget {
       valid: hasError || helperText.isNotEmpty,
     );
 
+    final counterShouldShow = counterVisible &&
+        textAlign != TextAlign.center &&
+        (isFocused || cv.isAlways);
+    final Widget counterChild;
+    final customCounter = buildCounter?.call(
+      context,
+      currentLength: currentLength,
+      maxLength: maxLength,
+      isFocused: isFocused,
+    );
+    if (buildCounter != null) {
+      counterChild = Visibility(
+        visible: counterShouldShow && customCounter != null,
+        child: customCounter == null
+            ? const SizedBox.shrink()
+            : Semantics(
+                container: true,
+                liveRegion: isFocused,
+                child: customCounter,
+              ),
+      );
+    } else {
+      counterChild = _HighlightText(
+        visible: counterVisible && textAlign != TextAlign.center,
+        animationDuration: null,
+        animationCurve: animationCurve,
+        text: " $counter",
+        textAlign: TextAlign.end,
+        textDirection: textDirection,
+        textStyle: hasError ? errorStyle : counterStyle,
+        valid: counterShouldShow,
+      );
+    }
+
     final child = Row(
       textDirection: textDirection,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1505,16 +2153,7 @@ class _Footer extends StatelessWidget {
                 )
               : footerMessage,
         ),
-        _HighlightText(
-          visible: counterVisible && textAlign != TextAlign.center,
-          animationDuration: null,
-          animationCurve: animationCurve,
-          text: " $counter",
-          textAlign: TextAlign.end,
-          textDirection: textDirection,
-          textStyle: hasError ? errorStyle : counterStyle,
-          valid: counterVisible && (isFocused || cv.isAlways),
-        ),
+        counterChild,
       ],
     );
     if (animationDuration != null) {
@@ -1652,7 +2291,7 @@ class _Icon extends StatelessWidget {
 
     Widget child = AndrossyIcon(
       icon,
-      key: ValueKey(tint.hashCode ^ icon.hashCode),
+      key: ValueKey(Object.hash(icon, tint)),
       size: size,
       color: tint,
     );
@@ -1662,23 +2301,14 @@ class _Icon extends StatelessWidget {
         duration: animationDuration!,
         switchInCurve: animationCurve,
         transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         child: child,
       );
     }
-    child = Padding(
-      padding: margin,
-      child: child,
-    );
+    child = Padding(padding: margin, child: child);
     if (onToggleClick != null) {
-      child = GestureDetector(
-        onTap: onToggleClick,
-        child: child,
-      );
+      child = GestureDetector(onTap: onToggleClick, child: child);
     }
     return child;
   }
@@ -1718,6 +2348,8 @@ class _Underline extends StatelessWidget {
   }
 }
 
+/// Side where the loading indicator appears when [AndrossyField.onCheck] or
+/// manual indicator visibility is active.
 enum IndicatorAlignment {
   start,
   end;
@@ -1727,6 +2359,7 @@ enum IndicatorAlignment {
   bool get isEnd => this == end;
 }
 
+/// Visibility mode for floating label, footer, and counter regions.
 enum FloatingVisibility {
   auto,
   hide,
@@ -1739,6 +2372,10 @@ enum FloatingVisibility {
   bool get isAlways => this == always;
 }
 
+/// Error categories understood by [AndrossyField].
+///
+/// Use [AndrossyField.onError] to map these values to localized/user-facing
+/// messages.
 enum AndrossyFieldError {
   none,
   alreadyFound,
@@ -1769,10 +2406,12 @@ enum AndrossyFieldError {
   bool get isUnmodified => this == AndrossyFieldError.unmodified;
 
   factory AndrossyFieldError.from(AndrossyFieldState state) {
-    if (state.text.isEmpty && !state._initial) {
-      return AndrossyFieldError.empty;
+    if (state.text.isEmpty) {
+      return state._initial
+          ? AndrossyFieldError.none
+          : AndrossyFieldError.empty;
     } else if (!state._valid) {
-      final length = state.text.length;
+      final length = state._textLength(state.text);
       if (state.maxCharacters > 0 && state.maxCharacters < length) {
         return AndrossyFieldError.maximum;
       } else if ((state.widget.minCharacters ?? 0) > 0 &&
@@ -1787,14 +2426,22 @@ enum AndrossyFieldError {
   }
 }
 
+/// Holds two values and returns one based on an active/inactive boolean.
+///
+/// Useful for lightweight icon toggles, such as password visibility:
+///
+/// ```dart
+/// drawableEye: const AndrossyFieldTweenProperty(
+///   inactive: Icons.visibility_off_outlined,
+///   active: Icons.visibility_outlined,
+/// )
+/// ```
 class AndrossyFieldTweenProperty<T> {
   final T active;
   final T inactive;
 
-  const AndrossyFieldTweenProperty({
-    required this.active,
-    T? inactive,
-  }) : inactive = inactive ?? active;
+  const AndrossyFieldTweenProperty({required this.active, T? inactive})
+      : inactive = inactive ?? active;
 
   const AndrossyFieldTweenProperty.all(T value) : this(active: value);
 
@@ -1803,6 +2450,19 @@ class AndrossyFieldTweenProperty<T> {
   }
 }
 
+/// State-aware value resolver for field colors, text styles, dimensions, and
+/// drawables.
+///
+/// Provide only the states you care about; missing states fall back to
+/// [enabled] or the closest relevant state.
+///
+/// ```dart
+/// borderColor: AndrossyFieldProperty(
+///   enabled: Colors.grey,
+///   focused: Colors.blue,
+///   error: Colors.red,
+/// )
+/// ```
 class AndrossyFieldProperty<T> {
   final bool _none;
   final T? enabled;
@@ -1954,7 +2614,8 @@ class AndrossyFieldProperty<T> {
 
   @override
   int get hashCode {
-    return _disabled.hashCode ^
+    return _none.hashCode ^
+        _disabled.hashCode ^
         enabled.hashCode ^
         _error.hashCode ^
         _errorFocused.hashCode ^
@@ -1967,18 +2628,26 @@ class AndrossyFieldProperty<T> {
   }
 
   @override
-  bool operator ==(Object other) => hashCode == other.hashCode;
-}
-
-extension on AndrossyFieldProperty<Color?>? {
-  AndrossyFieldProperty<Color?> get use {
-    return this ?? const AndrossyFieldProperty();
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is AndrossyFieldProperty<T> &&
+            other._none == _none &&
+            other.enabled == enabled &&
+            other._disabled == _disabled &&
+            other._error == _error &&
+            other._errorFocused == _errorFocused &&
+            other._focused == _focused &&
+            other._readOnly == _readOnly &&
+            other._loading == _loading &&
+            other._loadingFocused == _loadingFocused &&
+            other._valid == _valid &&
+            other._validFocused == _validFocused;
   }
 }
 
-extension on AndrossyFieldProperty<TextStyle?>? {
-  AndrossyFieldProperty<TextStyle?> get use {
-    return this ?? const AndrossyFieldProperty();
+extension _AndrossyFieldPropertyDefaults<T> on AndrossyFieldProperty<T>? {
+  AndrossyFieldProperty<T> get use {
+    return this ?? AndrossyFieldProperty<T>();
   }
 }
 
@@ -1995,32 +2664,33 @@ enum AndrossyFieldPropertyState {
   readOnly;
 
   factory AndrossyFieldPropertyState.from(AndrossyFieldState state) {
-    if (state.isEnabled) {
-      if (state.isFocused) {
-        if (state.isIndicatorVisible) {
-          return loadingFocused;
-        } else if (state._valid) {
-          return validFocused;
-        } else if (state.isError) {
-          return errorFocused;
-        } else {
-          return focused;
-        }
-      } else {
-        if (state.isIndicatorVisible) {
-          return loading;
-        } else if (state._valid) {
-          return valid;
-        } else if (state.isError) {
-          return error;
-        } else {
-          return enabled;
-        }
-      }
-    } else if (state.isReadMode) {
-      return readOnly;
-    } else {
+    if (!state.isEnabled) {
       return disabled;
+    }
+    if (state.isReadMode) {
+      return readOnly;
+    }
+
+    if (state.isFocused) {
+      if (state.isIndicatorVisible) {
+        return loadingFocused;
+      } else if (state._valid) {
+        return validFocused;
+      } else if (state.isError) {
+        return errorFocused;
+      } else {
+        return focused;
+      }
+    } else {
+      if (state.isIndicatorVisible) {
+        return loading;
+      } else if (state._valid) {
+        return valid;
+      } else if (state.isError) {
+        return error;
+      } else {
+        return enabled;
+      }
     }
   }
 }

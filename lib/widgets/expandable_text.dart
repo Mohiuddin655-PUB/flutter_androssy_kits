@@ -44,7 +44,7 @@ class AndrossyExpandableText extends StatefulWidget {
     ),
     this.duration = const Duration(microseconds: 250),
     this.curve = Curves.linear,
-  });
+  }) : assert(initial >= 0, 'initial must not be negative');
 
   @override
   State<AndrossyExpandableText> createState() {
@@ -70,35 +70,48 @@ class _AndrossyExpandableTextState extends State<AndrossyExpandableText>
         widget.curve != oldWidget.curve ||
         widget.initial != oldWidget.initial ||
         widget.data != oldWidget.data) {
-      if (_controller != null) _controller?.dispose();
+      _disposeController();
       _controller = null;
       _animation = null;
+      if (widget.data != oldWidget.data ||
+          widget.initial != oldWidget.initial) {
+        _expanded = false;
+      }
       _init();
     }
   }
 
+  int get _characterCount => widget.data.characters.length;
+
+  int get _initialCount => widget.initial.clamp(0, _characterCount).toInt();
+
+  Duration get _effectiveDuration {
+    return widget.duration.isNegative ? Duration.zero : widget.duration;
+  }
+
   void _init() {
-    if (_isExpansion && widget.duration != Duration.zero) {
+    final duration = _effectiveDuration;
+    if (_isExpansion && duration != Duration.zero) {
       _controller = AnimationController(
-        duration: widget.duration * widget.data.length,
-        lowerBound: (widget.initial / widget.data.length).clamp(0.0, 1.0),
+        duration: duration * _characterCount,
+        lowerBound: (_initialCount / _characterCount).clamp(0.0, 1.0),
         vsync: this,
       );
-      _animation = CurveTween(
-        curve: widget.curve,
-      ).animate(_controller!);
+      _animation = CurveTween(curve: widget.curve).animate(_controller!);
     }
   }
 
   @override
   void dispose() {
-    if (_controller != null) {
-      _controller?.dispose();
-    }
+    _disposeController();
     super.dispose();
   }
 
-  bool get _isExpansion => widget.data.length > (widget.initial * 2);
+  void _disposeController() {
+    _controller?.dispose();
+  }
+
+  bool get _isExpansion => _characterCount > (_initialCount * 2);
 
   bool _expanded = false;
 
@@ -109,7 +122,7 @@ class _AndrossyExpandableTextState extends State<AndrossyExpandableText>
       final count = (_animation!.value.clamp(0, 1) * chars.length).round();
       return chars.take(count);
     }
-    return chars.take(_expanded ? chars.length : widget.initial);
+    return chars.take(_expanded ? chars.length : _initialCount);
   }
 
   void _toggle() {
@@ -152,7 +165,10 @@ class _AndrossyExpandableTextState extends State<AndrossyExpandableText>
     return GestureDetector(
       onTap: _toggle,
       child: _animation != null
-          ? AnimatedBuilder(animation: _animation!, builder: (_, __) => _text)
+          ? AnimatedBuilder(
+              animation: _animation!,
+              builder: (_, __) => _text,
+            )
           : ColoredBox(color: Colors.transparent, child: _text),
     );
   }

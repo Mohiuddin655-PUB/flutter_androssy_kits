@@ -3,13 +3,9 @@ import 'package:flutter/material.dart';
 typedef AndrossySelectionCallback = void Function(String tag);
 typedef AndrossySelectionTagBuilder<T> = String Function(T value);
 typedef AndrossySelectionSearchBuilder<T> = bool Function(
-  String query,
-  T value,
-);
+    String query, T value);
 typedef AndrossySelectionListBuilder<T> = Widget Function(
-  BuildContext context,
-  List<Widget> children,
-);
+    BuildContext context, List<Widget> children);
 
 typedef AndrossySelectionBuilder<T> = Widget Function(
   BuildContext context,
@@ -89,6 +85,7 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
   List<AndrossySelectionInstance<T>> _filtered = [];
 
   List<AndrossySelectionInstance<T>> _temp = [];
+  TextEditingController? _filterController;
 
   bool get _isFilterMode {
     return widget.controller != null && widget.searchBuilder != null;
@@ -108,7 +105,20 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
     }).toList();
     _filtered = widget.filterMode ? _merge((e) => e.tag) : _roots;
     _temp = _filtered;
-    if (_isFilterMode) widget.controller?.addListener(_filter);
+    _attachFilterController();
+  }
+
+  void _attachFilterController() {
+    if (!_isFilterMode || identical(_filterController, widget.controller)) {
+      return;
+    }
+    _detachFilterController();
+    _filterController = widget.controller?..addListener(_filter);
+  }
+
+  void _detachFilterController() {
+    _filterController?.removeListener(_filter);
+    _filterController = null;
   }
 
   List<AndrossySelectionInstance<T>> _merge(
@@ -144,7 +154,8 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
   }
 
   void _filter() {
-    final query = widget.controller!.text;
+    final query = _filterController!.text;
+    if (!mounted) return;
     setState(() {
       if (query.isNotEmpty) {
         final filtered = _filtered.where((e) {
@@ -170,13 +181,14 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
         oldWidget.searchBuilder != widget.searchBuilder ||
         oldWidget.initialTags != widget.initialTags ||
         oldWidget.items != widget.items) {
+      _detachFilterController();
       _init();
     }
   }
 
   @override
   void dispose() {
-    if (_isFilterMode) widget.controller?.removeListener(_filter);
+    _detachFilterController();
     super.dispose();
   }
 
@@ -184,10 +196,7 @@ class _AndrossySelectionState<T> extends State<AndrossySelection<T>> {
   Widget build(BuildContext context) {
     final children = List.generate(_temp.length, (index) {
       final item = _temp.elementAt(index);
-      return widget.builder(
-        context,
-        item..selected = _tags.contains(item.tag),
-      );
+      return widget.builder(context, item..selected = _tags.contains(item.tag));
     });
     if (widget.listBuilder != null) {
       return widget.listBuilder!(context, children);

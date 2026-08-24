@@ -60,12 +60,7 @@ class AndrossyFade extends StatelessWidget {
               begin: side._begin,
               end: side._end,
               colors: side._fader,
-              stops: [
-                0.0,
-                fadeWidth / width,
-                1.0 - fadeWidth / width,
-                1.0,
-              ],
+              stops: [0.0, fadeWidth / width, 1.0 - fadeWidth / width, 1.0],
             ).createShader(
               bounds.shift(Offset(-bounds.left, -bounds.top)),
               textDirection: Directionality.of(context),

@@ -4,11 +4,7 @@ import 'package:flutter/rendering.dart';
 class AndrossyRender extends SingleChildRenderObjectWidget {
   final Function(Size size) render;
 
-  const AndrossyRender({
-    super.key,
-    required this.render,
-    super.child,
-  });
+  const AndrossyRender({super.key, required this.render, super.child});
 
   @override
   RenderObject createRenderObject(BuildContext context) {

@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 
 typedef AndrossyOptionCallback = Widget Function(
-  BuildContext context,
-  Widget child,
-  VoidCallback callback,
-);
+    BuildContext context, Widget child, VoidCallback callback);
 
 typedef AndrossyOptionBuilder<T> = Widget Function(
-  BuildContext context,
-  int index,
-  bool selected,
-);
+    BuildContext context, int index, bool selected);
 
 typedef AndrossyOptionChanged<T> = void Function(int index);
 
@@ -18,10 +12,8 @@ class AndrossyOptionProperty<T extends Object?> {
   final T? active;
   final T? inactive;
 
-  const AndrossyOptionProperty({
-    T? active,
-    this.inactive,
-  }) : active = active ?? inactive;
+  const AndrossyOptionProperty({T? active, this.inactive})
+      : active = active ?? inactive;
 
   const AndrossyOptionProperty.all(T? value) : this(inactive: value);
 
@@ -63,22 +55,38 @@ class AndrossyOption extends StatefulWidget {
     this.spaceBetween = 0,
     this.gesture,
     this.onChanged,
-  });
+  })  : assert(itemCount >= 0, 'itemCount must not be negative'),
+        assert(currentIndex >= 0, 'currentIndex must not be negative');
 
   @override
   State<AndrossyOption> createState() => AndrossyOptionState();
 }
 
 class AndrossyOptionState extends State<AndrossyOption> {
-  late int currentIndex = widget.currentIndex;
+  late int currentIndex = _clampIndex(widget.currentIndex);
 
   bool get isVerticalMode => widget.direction == Axis.vertical;
 
+  @override
+  void didUpdateWidget(covariant AndrossyOption oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentIndex != oldWidget.currentIndex ||
+        widget.itemCount != oldWidget.itemCount) {
+      currentIndex = _clampIndex(widget.currentIndex);
+    }
+  }
+
   void changeIndex(int index) {
-    setState(() {
-      currentIndex = index;
-      if (widget.onChanged != null) widget.onChanged!(index);
-    });
+    if (index < 0 || index >= widget.itemCount || index == currentIndex) {
+      return;
+    }
+    setState(() => currentIndex = index);
+    widget.onChanged?.call(index);
+  }
+
+  int _clampIndex(int index) {
+    if (widget.itemCount <= 0) return 0;
+    return index.clamp(0, widget.itemCount - 1).toInt();
   }
 
   @override
@@ -125,6 +133,7 @@ class AndrossyOptionState extends State<AndrossyOption> {
           root = widget.gesture!(context, child, () => changeIndex(index));
         } else {
           root = GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => changeIndex(index),
             child: AbsorbPointer(child: child),
           );

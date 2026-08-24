@@ -67,7 +67,9 @@ class AndrossySwitch extends StatefulWidget {
     this.trackStrokeSize,
     this.trackRatio = 1.65,
     this.onChanged,
-  });
+  })  : assert(size > 0, 'size must be greater than zero'),
+        assert(trackRatio > 0, 'trackRatio must be greater than zero'),
+        assert(thumbWalkingTime >= 0, 'thumbWalkingTime must not be negative');
 
   @override
   State<AndrossySwitch> createState() => _SwitchButtonState();
@@ -123,10 +125,7 @@ class _SwitchButtonState extends State<AndrossySwitch>
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
     ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.linear,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.linear),
     );
   }
 
@@ -141,6 +140,7 @@ class _SwitchButtonState extends State<AndrossySwitch>
     super.didUpdateWidget(oldWidget);
 
     I = _config();
+    _syncDuration();
 
     if (widget.value) {
       _animationController.forward();
@@ -149,8 +149,18 @@ class _SwitchButtonState extends State<AndrossySwitch>
     }
   }
 
+  void _syncDuration() {
+    final nextDuration = Duration(
+      milliseconds: I.thumbWalkingTime < 0 ? 0 : I.thumbWalkingTime,
+    );
+    _duration = nextDuration;
+    _animationController.duration = nextDuration;
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!widget.visibility) return const SizedBox.shrink();
+
     final colorScheme = Theme.of(context).colorScheme;
     final theme = SwitchTheme.of(context);
 
@@ -210,7 +220,9 @@ class _SwitchButtonState extends State<AndrossySwitch>
     var trackStrokeSize = I.trackStrokeSize ?? size.x(7) ?? 2.0;
     var borderRadius = I.trackBorderRadius ?? size;
     var dimension = I.trackRatio >= 1 ? I.trackRatio : 1.65;
-    var thumbSize = size - (trackStrokeSize * 2) - (thumbSpacing * 2);
+    var thumbSize = (size - (trackStrokeSize * 2) - (thumbSpacing * 2))
+        .clamp(0.0, double.infinity)
+        .toDouble();
 
     Widget child = AnimatedBuilder(
       animation: _animationController,
@@ -253,9 +265,7 @@ class _SwitchButtonState extends State<AndrossySwitch>
                 child: thumbIcon != null
                     ? FittedBox(
                         child: Padding(
-                          padding: EdgeInsets.all(
-                            I.thumbIconSpacing ?? 0,
-                          ),
+                          padding: EdgeInsets.all(I.thumbIconSpacing ?? 0),
                           child: AndrossyIcon(
                             thumbIcon,
                             color: thumbIconTint,
@@ -272,13 +282,10 @@ class _SwitchButtonState extends State<AndrossySwitch>
 
     if (widget.onChanged != null) {
       return GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: () {
           if (widget.enabled) {
-            if (widget.value) {
-              _animationController.forward();
-            } else {
-              _animationController.reverse();
-            }
+            _animationController.animateTo(widget.value ? 0.0 : 1.0);
             widget.onChanged?.call(!widget.value);
           }
         },
@@ -407,10 +414,8 @@ class AndrossySwitchContent<T> {
   final T active;
   final T inactive;
 
-  const AndrossySwitchContent({
-    required this.active,
-    T? inactive,
-  }) : inactive = inactive ?? active;
+  const AndrossySwitchContent({required this.active, T? inactive})
+      : inactive = inactive ?? active;
 
   T detect(bool isActivated) => isActivated ? active : inactive;
 }

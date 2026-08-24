@@ -120,10 +120,7 @@ class AndrossyImage extends StatelessWidget {
           height: height,
           fit: fit ?? BoxFit.contain,
           colorFilter: tint != null
-              ? ColorFilter.mode(
-                  tint!,
-                  tintMode ?? BlendMode.srcIn,
-                )
+              ? ColorFilter.mode(tint!, tintMode ?? BlendMode.srcIn)
               : null,
           theme: AndrossySvgTheme(
             currentColor: tint ?? const Color(0xFF808080),
@@ -136,10 +133,7 @@ class AndrossyImage extends StatelessWidget {
         ),
       );
     } else {
-      return SizedBox(
-        width: width,
-        height: height,
-      );
+      return SizedBox(width: width, height: height);
     }
   }
 }

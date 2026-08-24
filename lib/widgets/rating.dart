@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 class AndrossyRatingIcon {
@@ -38,7 +36,9 @@ class AndrossyRating extends StatefulWidget {
     this.tapOnlyMode = false,
     this.updateOnDrag = false,
     this.wrapAlignment = WrapAlignment.start,
-  })  : _itemBuilder = null,
+  })  : assert(itemCount >= 0, 'itemCount must not be negative'),
+        assert(itemSize >= 0, 'itemSize must not be negative'),
+        _itemBuilder = null,
         _ratingWidget = icon;
 
   const AndrossyRating.builder({
@@ -62,7 +62,9 @@ class AndrossyRating extends StatefulWidget {
     this.tapOnlyMode = false,
     this.updateOnDrag = false,
     this.wrapAlignment = WrapAlignment.start,
-  })  : _itemBuilder = itemBuilder,
+  })  : assert(itemCount >= 0, 'itemCount must not be negative'),
+        assert(itemSize >= 0, 'itemSize must not be negative'),
+        _itemBuilder = itemBuilder,
         _ratingWidget = null;
 
   final ValueChanged<double>? onRatingChange;
@@ -120,9 +122,8 @@ class _AndrossyRatingState extends State<AndrossyRating> {
   void initState() {
     super.initState();
     _glow = ValueNotifier(false);
-    _minRating = widget.minRating;
-    _maxRating = widget.maxRating ?? widget.itemCount.toDouble();
     _rating = widget.initialRating;
+    _syncBounds();
   }
 
   @override
@@ -131,8 +132,19 @@ class _AndrossyRatingState extends State<AndrossyRating> {
     if (oldWidget.initialRating != widget.initialRating) {
       _rating = widget.initialRating;
     }
-    _minRating = widget.minRating;
-    _maxRating = widget.maxRating ?? widget.itemCount.toDouble();
+    _syncBounds();
+  }
+
+  void _syncBounds() {
+    final itemMax = widget.itemCount.toDouble();
+    _minRating = widget.minRating.clamp(0.0, itemMax).toDouble();
+    _maxRating =
+        (widget.maxRating ?? itemMax).clamp(_minRating, itemMax).toDouble();
+    _rating = _clampRating(_rating);
+  }
+
+  double _clampRating(double value) {
+    return value.clamp(_minRating, _maxRating).toDouble();
   }
 
   @override
@@ -150,7 +162,7 @@ class _AndrossyRatingState extends State<AndrossyRating> {
     return Material(
       color: Colors.transparent,
       child: Wrap(
-        alignment: WrapAlignment.start,
+        alignment: widget.wrapAlignment,
         textDirection: textDirection,
         direction: widget.direction,
         children: List.generate(
@@ -192,7 +204,8 @@ class _AndrossyRatingState extends State<AndrossyRating> {
             fit: BoxFit.contain,
             child: _isRTL
                 ? Transform(
-                    transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
+                    transform: Matrix4.identity()
+                      ..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
                     alignment: Alignment.center,
                     transformHitTests: false,
                     child: ratingWidget!.half,
@@ -228,8 +241,8 @@ class _AndrossyRatingState extends State<AndrossyRating> {
                 (tappedOnFirstHalf && widget.allowHalfRating ? 0.5 : 1.0);
           }
 
-          value = max(value, widget.minRating);
-          if (widget.onRatingChange != null) widget.onRatingChange?.call(value);
+          value = _clampRating(value);
+          widget.onRatingChange?.call(value);
           _rating = value;
           setState(() {});
         },
@@ -284,10 +297,15 @@ class _AndrossyRatingState extends State<AndrossyRating> {
 
       final pos = box.globalToLocal(dragDetails.globalPosition);
       double i;
+      final itemExtent = widget.direction == Axis.horizontal
+          ? widget.itemSize + widget.itemPadding.horizontal
+          : widget.itemSize + widget.itemPadding.vertical;
+      if (itemExtent <= 0) return;
+
       if (widget.direction == Axis.horizontal) {
-        i = pos.dx / (widget.itemSize + widget.itemPadding.horizontal);
+        i = pos.dx / itemExtent;
       } else {
-        i = pos.dy / (widget.itemSize + widget.itemPadding.vertical);
+        i = pos.dy / itemExtent;
       }
       var currentRating = widget.allowHalfRating ? i : i.round().toDouble();
       if (currentRating > widget.itemCount) {
@@ -300,9 +318,9 @@ class _AndrossyRatingState extends State<AndrossyRating> {
         currentRating = widget.itemCount - currentRating;
       }
 
-      _rating = currentRating.clamp(_minRating, _maxRating);
+      _rating = _clampRating(currentRating);
       if (widget.updateOnDrag && widget.onRatingChange != null) {
-        widget.onRatingChange!(iconRating);
+        widget.onRatingChange!(_rating);
       }
       setState(() {});
     }
@@ -314,7 +332,7 @@ class _AndrossyRatingState extends State<AndrossyRating> {
 
   void _onDragEnd(DragEndDetails details) {
     _glow.value = false;
-    if (widget.onRatingChange != null) widget.onRatingChange!(iconRating);
+    if (widget.onRatingChange != null) widget.onRatingChange!(_rating);
     iconRating = 0.0;
   }
 }
@@ -355,18 +373,13 @@ class _HalfRatingWidget extends StatelessWidget {
                 FittedBox(
                   fit: BoxFit.contain,
                   child: ClipRect(
-                    clipper: _HalfClipper(
-                      rtlMode: rtlMode,
-                    ),
+                    clipper: _HalfClipper(rtlMode: rtlMode),
                     child: child,
                   ),
                 ),
               ],
             )
-          : FittedBox(
-              fit: BoxFit.contain,
-              child: child,
-            ),
+          : FittedBox(fit: BoxFit.contain, child: child),
     );
   }
 }
@@ -378,18 +391,8 @@ class _HalfClipper extends CustomClipper<Rect> {
 
   @override
   Rect getClip(Size size) => rtlMode
-      ? Rect.fromLTRB(
-          size.width / 2,
-          0.0,
-          size.width,
-          size.height,
-        )
-      : Rect.fromLTRB(
-          0.0,
-          0.0,
-          size.width / 2,
-          size.height,
-        );
+      ? Rect.fromLTRB(size.width / 2, 0.0, size.width, size.height)
+      : Rect.fromLTRB(0.0, 0.0, size.width / 2, size.height);
 
   @override
   bool shouldReclip(CustomClipper<Rect> oldClipper) => true;
@@ -417,10 +420,7 @@ class _NoRatingWidget extends StatelessWidget {
         fit: BoxFit.contain,
         child: enableMask
             ? ColorFiltered(
-                colorFilter: ColorFilter.mode(
-                  unratedColor,
-                  BlendMode.srcIn,
-                ),
+                colorFilter: ColorFilter.mode(unratedColor, BlendMode.srcIn),
                 child: child,
               )
             : child,

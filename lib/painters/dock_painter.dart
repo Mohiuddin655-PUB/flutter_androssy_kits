@@ -222,9 +222,7 @@ class AndrossyDockConfig extends AndrossyPainterConfig {
 class AndrossyDockPainter extends CustomPainter {
   final AndrossyDockConfig config;
 
-  const AndrossyDockPainter({
-    this.config = const AndrossyDockConfig(),
-  });
+  const AndrossyDockPainter({this.config = const AndrossyDockConfig()});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -248,10 +246,7 @@ class AndrossyDockPainter extends CustomPainter {
 class AndrossyDockClipper extends CustomClipper<Path> {
   final AndrossyDockConfig config;
 
-  const AndrossyDockClipper({
-    super.reclip,
-    required this.config,
-  });
+  const AndrossyDockClipper({super.reclip, required this.config});
 
   @override
   Path getClip(Size size) {

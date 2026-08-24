@@ -76,22 +76,10 @@ abstract class AndrossyPainterConfig {
       final bl = b.bottomLeft;
 
       final radius = BorderRadius.only(
-        topLeft: Radius.elliptical(
-          tl.x >= xi ? i : 0,
-          tl.y >= yi ? i : 0,
-        ),
-        topRight: Radius.elliptical(
-          tr.x >= xi ? i : 0,
-          tr.y >= yi ? i : 0,
-        ),
-        bottomLeft: Radius.elliptical(
-          bl.x >= xi ? i : 0,
-          bl.y >= yi ? i : 0,
-        ),
-        bottomRight: Radius.elliptical(
-          br.x >= xi ? i : 0,
-          br.y >= yi ? i : 0,
-        ),
+        topLeft: Radius.elliptical(tl.x >= xi ? i : 0, tl.y >= yi ? i : 0),
+        topRight: Radius.elliptical(tr.x >= xi ? i : 0, tr.y >= yi ? i : 0),
+        bottomLeft: Radius.elliptical(bl.x >= xi ? i : 0, bl.y >= yi ? i : 0),
+        bottomRight: Radius.elliptical(br.x >= xi ? i : 0, br.y >= yi ? i : 0),
       );
       if (strokeAlign == StrokeAlign.inside) {
         return borderRadius! - radius;

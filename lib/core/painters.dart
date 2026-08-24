@@ -1,4 +1,4 @@
-library painters;
+library;
 
 export '../painters/dock_painter.dart';
 export '../painters/painter.dart';

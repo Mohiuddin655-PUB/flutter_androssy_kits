@@ -42,12 +42,16 @@ class _AndrossySplashState extends State<AndrossySplash> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _timer?.cancel();
       _timer = Timer(Duration(milliseconds: widget.duration), () {
-        if (widget.onExecute != null) {
-          widget.onExecute?.call(context).whenComplete(() {
-            return widget.onRoute?.call(context);
+        if (!mounted) return;
+        final onExecute = widget.onExecute;
+        final onRoute = widget.onRoute;
+        if (onExecute != null) {
+          onExecute(context).whenComplete(() {
+            if (!mounted) return;
+            onRoute?.call(context);
           });
         } else {
-          widget.onRoute?.call(context);
+          onRoute?.call(context);
         }
       });
     });
@@ -55,8 +59,8 @@ class _AndrossySplashState extends State<AndrossySplash> {
 
   @override
   void dispose() {
-    super.dispose();
     _timer?.cancel();
+    super.dispose();
   }
 
   @override

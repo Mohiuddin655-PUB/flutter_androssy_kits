@@ -57,7 +57,7 @@ class AndrossyToolbar extends StatelessWidget {
       children: [
         if (leading != null) ...[leading!, SizedBox(width: titleSpace)],
         Expanded(child: _title(context)),
-        ...actions
+        ...actions,
       ],
     );
   }
@@ -79,7 +79,7 @@ class AndrossyToolbar extends StatelessWidget {
           if (elevation > 0)
             Divider(
               height: elevation,
-              color: elevationColor ?? Colors.grey.withOpacity(0.1),
+              color: elevationColor ?? Colors.grey.withValues(alpha: 0.1),
             ),
         ],
       ),

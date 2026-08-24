@@ -57,21 +57,21 @@ class AndrossyThumbnail extends StatelessWidget {
                     padding: EdgeInsets.all(buttonRadius / 2),
                     decoration: BoxDecoration(
                       color: buttonBackgroundColor ??
-                          Colors.black.withOpacity(0.75),
+                          Colors.black.withValues(alpha: 0.75),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              buttonShadowColor ?? Colors.grey.withOpacity(0.1),
+                          color: buttonShadowColor ??
+                              Colors.grey.withValues(alpha: 0.1),
                           blurRadius: (buttonRadius / 2) * 5,
-                        )
+                        ),
                       ],
                     ),
                     child: AndrossyIcon(
                       Icons.play_arrow_rounded,
                       size: buttonRadius * 2,
                       color: buttonForegroundColor ??
-                          Colors.white.withOpacity(0.95),
+                          Colors.white.withValues(alpha: 0.95),
                     ),
                   ),
                 ),

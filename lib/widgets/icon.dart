@@ -68,10 +68,7 @@ class AndrossyIcon extends StatelessWidget {
           colorBlendMode: tintMode,
         );
       default:
-        return SizedBox(
-          width: size,
-          height: size,
-        );
+        return SizedBox(width: size, height: size);
     }
   }
 }

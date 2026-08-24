@@ -133,9 +133,7 @@ class AndrossyStarConfig extends AndrossyPainterConfig {
 class AndrossyStarPainter extends CustomPainter {
   final AndrossyStarConfig config;
 
-  const AndrossyStarPainter({
-    this.config = const AndrossyStarConfig(),
-  });
+  const AndrossyStarPainter({this.config = const AndrossyStarConfig()});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -159,10 +157,7 @@ class AndrossyStarPainter extends CustomPainter {
 class AndrossyStarClipper extends CustomClipper<Path> {
   final AndrossyStarConfig config;
 
-  const AndrossyStarClipper({
-    super.reclip,
-    required this.config,
-  });
+  const AndrossyStarClipper({super.reclip, required this.config});
 
   @override
   Path getClip(Size size) {

@@ -20,10 +20,7 @@ class AndrossySetting extends StatelessWidget {
     this.leading,
     this.tailing,
     this.subscription,
-    this.padding = const EdgeInsets.symmetric(
-      horizontal: 24,
-      vertical: 12,
-    ),
+    this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
     this.onClick,
   });
 
@@ -39,10 +36,7 @@ class AndrossySetting extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (header != null) header!,
-                if (body != null) body!,
-              ],
+              children: [if (header != null) header!, if (body != null) body!],
             ),
           ),
           if (content != null) content!,

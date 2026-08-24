@@ -62,10 +62,7 @@ class AndrossyCoordinator extends StatelessWidget {
               floating: floating,
               delegate: _SliverAppBarDelegate(
                 height: toolbarHeight,
-                child: SizedBox(
-                  height: toolbarHeight,
-                  child: toolbar!,
-                ),
+                child: SizedBox(height: toolbarHeight, child: toolbar!),
               ),
             ),
         ];
@@ -79,10 +76,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   final double height;
   final Widget child;
 
-  _SliverAppBarDelegate({
-    required this.height,
-    required this.child,
-  });
+  _SliverAppBarDelegate({required this.height, required this.child});
 
   @override
   double get minExtent => height;

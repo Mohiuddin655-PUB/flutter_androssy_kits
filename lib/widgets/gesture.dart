@@ -5,23 +5,56 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+const _kDefaultDebounceDuration = Duration(milliseconds: 1500);
+
 typedef GestureAnimationBuilder = Widget Function(
   BuildContext context,
   Animation<double> animation,
   Widget child,
 );
 
+/// A reusable gesture surface with optional Material feedback and composable
+/// press/hover animations.
+///
+/// Use [AndrossyGesture] when a child needs app-consistent tap behavior,
+/// ripple/highlight customization, pointer cursor handling, or lightweight
+/// animation effects without rebuilding that logic in every button/list item.
+///
+/// ```dart
+/// AndrossyGesture(
+///   borderRadius: BorderRadius.circular(12),
+///   effects: const [GestureAnimation.scale(), GestureAnimation.fade()],
+///   onTap: save,
+///   child: const Padding(
+///     padding: EdgeInsets.all(12),
+///     child: Text('Save'),
+///   ),
+/// )
+/// ```
+///
+/// [debounceDuration] defaults to the historical Androssy debounce window.
+/// Set it to [Duration.zero] for controls that should accept rapid repeated
+/// taps, such as steppers, counters, or scrubber buttons.
 class AndrossyGesture extends StatefulWidget {
   final double elevation;
   final Color? elevationColor;
+  final Duration debounceDuration;
   final bool enableFeedback;
+  final bool excludeFromSemantics;
+  final bool autofocus;
+  final bool canRequestFocus;
   final Color? highlightColor;
   final Color? hoverColor;
+  final Duration? hoverDuration;
   final MaterialType? materialType;
   final MouseCursor? mouseCursor;
+  final FocusNode? focusNode;
+  final HitTestBehavior? behavior;
+  final double? splashRadius;
   final Color? splashColor;
   final InteractiveInkFeatureFactory? splashFactory;
   final WidgetStateProperty<Color?>? overlayColor;
+  final WidgetStatesController? statesController;
 
   final bool visibility;
 
@@ -42,6 +75,8 @@ class AndrossyGesture extends StatefulWidget {
   final GestureLongPressStartCallback? onLongPressStart;
   final GestureLongPressEndCallback? onLongPressEnd;
   final GestureLongPressCancelCallback? onLongPressCancel;
+  final GestureLongPressUpCallback? onLongPressUp;
+  final ValueChanged<bool>? onFocusChange;
   final ValueChanged<bool>? onHover;
 
   final Widget child;
@@ -53,15 +88,24 @@ class AndrossyGesture extends StatefulWidget {
     this.elevationColor,
     this.borderRadius,
     this.backgroundColor,
+    this.debounceDuration = _kDefaultDebounceDuration,
     this.clipBehavior,
     this.enabled = true,
     this.enableFeedback = true,
+    this.excludeFromSemantics = false,
+    this.autofocus = false,
+    this.canRequestFocus = true,
     this.materialType,
     this.mouseCursor,
+    this.focusNode,
+    this.behavior,
     this.overlayColor,
+    this.statesController,
     this.shape,
+    this.splashRadius,
     this.splashColor,
     this.splashFactory,
+    this.hoverDuration,
     this.hoverColor,
     this.highlightColor,
     this.effects,
@@ -74,6 +118,8 @@ class AndrossyGesture extends StatefulWidget {
     this.onLongPressStart,
     this.onLongPressEnd,
     this.onLongPressCancel,
+    this.onLongPressUp,
+    this.onFocusChange,
     this.onHover,
     required this.child,
   });
@@ -85,38 +131,157 @@ class AndrossyGesture extends StatefulWidget {
 class _AndrossyGestureState extends State<AndrossyGesture>
     with TickerProviderStateMixin {
   final List<AnimationController> _controllers = [];
-  final List<Animation<double>> _animations = [];
+  final List<CurvedAnimation> _animations = [];
 
-  Timer? _timer;
+  Timer? _debounceTimer;
 
-  bool _called = false;
+  bool _tapLocked = false;
 
   bool get _hasAnimations => _controllers.isNotEmpty;
+
+  bool get _hasTapCallbacks {
+    return widget.onTap != null ||
+        widget.onTapUp != null ||
+        widget.onTapDown != null ||
+        widget.onTapCancel != null ||
+        widget.onDoubleTap != null;
+  }
+
+  bool get _hasLongPressCallbacks {
+    return widget.onLongPress != null ||
+        widget.onLongPressStart != null ||
+        widget.onLongPressEnd != null ||
+        widget.onLongPressCancel != null ||
+        widget.onLongPressUp != null;
+  }
+
+  bool get _hasPointerCallbacks {
+    return _hasTapCallbacks || _hasLongPressCallbacks || widget.onHover != null;
+  }
+
+  bool get _hasGestureDetectorCallbacks {
+    return _hasTapCallbacks || _hasLongPressCallbacks;
+  }
 
   bool get _isRepeatMode {
     return _effects.any((effect) => effect.repeat);
   }
 
-  bool get _inkwell {
-    return widget.enableFeedback ||
-        widget.splashColor != null ||
-        widget.highlightColor != null ||
-        widget.onHover != null;
+  bool get _hasInkCallbacks {
+    return widget.onTap != null ||
+        widget.onTapUp != null ||
+        widget.onTapDown != null ||
+        widget.onDoubleTap != null ||
+        widget.onLongPress != null ||
+        widget.onLongPressUp != null;
   }
 
-  bool get _isHoldMode {
+  bool get _hasFocusOrStateConfiguration {
+    return widget.onFocusChange != null ||
+        widget.focusNode != null ||
+        widget.autofocus ||
+        widget.statesController != null;
+  }
+
+  bool get _hasInkConfiguration {
+    return _hasFocusOrStateConfiguration ||
+        (widget.enableFeedback ||
+            widget.splashRadius != null ||
+            widget.splashColor != null ||
+            widget.highlightColor != null ||
+            widget.hoverColor != null ||
+            widget.overlayColor != null ||
+            widget.splashFactory != null ||
+            widget.hoverDuration != null);
+  }
+
+  bool get _wantsInkResponse {
+    return _hasInkCallbacks && _hasInkConfiguration;
+  }
+
+  bool get _needsDetailedLongPress {
+    return _shouldAnimateLongPress ||
+        widget.onLongPressStart != null ||
+        widget.onLongPressEnd != null ||
+        widget.onLongPressCancel != null;
+  }
+
+  bool get _usesInkWell => _wantsInkResponse && !_needsDetailedLongPress;
+
+  bool get _needsMouseRegion {
+    return !_usesInkWell &&
+        (widget.onHover != null ||
+            widget.mouseCursor != null ||
+            (_hasPointerCallbacks && widget.enabled));
+  }
+
+  HitTestBehavior? get _effectiveHitTestBehavior {
+    return widget.behavior ??
+        (_hasGestureDetectorCallbacks ? HitTestBehavior.opaque : null);
+  }
+
+  bool get _shouldAnimateTapPress {
     if (_isRepeatMode) return false;
     if (!_hasAnimations) return false;
     if (widget.onDoubleTap != null) return false;
-    if (widget.onTap != null) return true;
-    if (widget.onTapDown != null) return true;
-    return false;
+    return widget.onTap != null || widget.onTapDown != null;
   }
 
-  bool get _isLongPressHoldMode {
+  bool get _shouldAnimateLongPress {
     if (_isRepeatMode) return false;
     if (!_hasAnimations) return false;
-    return widget.onLongPress != null;
+    return _hasLongPressCallbacks;
+  }
+
+  bool get _hasMaterial {
+    return widget.elevation > 0 ||
+        widget.backgroundColor != null ||
+        widget.shape != null ||
+        widget.borderRadius != null ||
+        widget.materialType != null;
+  }
+
+  Color get _transparentColor => Colors.transparent;
+
+  MouseCursor get _effectiveMouseCursor {
+    return widget.mouseCursor ??
+        (_hasPointerCallbacks
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic);
+  }
+
+  BorderRadius? _resolvedBorderRadius(BuildContext context) {
+    final radius = widget.borderRadius;
+    if (radius == null) return null;
+    return radius.resolve(Directionality.maybeOf(context) ?? TextDirection.ltr);
+  }
+
+  BorderRadius? _resolvedInkBorderRadius(BuildContext context) {
+    if (widget.shape != null) return null;
+    return _resolvedBorderRadius(context);
+  }
+
+  BorderRadiusGeometry? get _materialBorderRadius {
+    if (widget.shape != null) return null;
+    return widget.borderRadius;
+  }
+
+  MaterialType get _effectiveMaterialType {
+    final type = widget.materialType ?? MaterialType.canvas;
+    if (type == MaterialType.circle &&
+        (widget.shape != null || widget.borderRadius != null)) {
+      return MaterialType.canvas;
+    }
+    return type;
+  }
+
+  Clip get _effectiveMaterialClipBehavior {
+    if (widget.clipBehavior != null) return widget.clipBehavior!;
+    return widget.shape != null ||
+            widget.borderRadius != null ||
+            _effectiveMaterialType == MaterialType.circle
+        ? Clip.antiAlias
+        : Clip.none;
   }
 
   List<GestureAnimation> get _effects => widget.effects ?? [];
@@ -130,20 +295,26 @@ class _AndrossyGestureState extends State<AndrossyGesture>
   @override
   void didUpdateWidget(covariant AndrossyGesture oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.effects != oldWidget.effects) {
+    if (!listEquals(widget.effects, oldWidget.effects)) {
       _disposeControllers();
       _init();
+    }
+    if (widget.debounceDuration != oldWidget.debounceDuration) {
+      _resetTapDebounce();
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _debounceTimer?.cancel();
     _disposeControllers();
     super.dispose();
   }
 
   void _disposeControllers() {
+    for (final animation in _animations) {
+      animation.dispose();
+    }
     for (var controller in _controllers) {
       controller.dispose();
     }
@@ -160,9 +331,9 @@ class _AndrossyGestureState extends State<AndrossyGesture>
           debugLabel: effect.debugLabel,
           duration: effect.duration,
           reverseDuration: effect.reverseDuration,
-          value: effect.value,
-          upperBound: effect.upperBound,
-          lowerBound: effect.lowerBound,
+          value: effect._controllerValue,
+          upperBound: effect._controllerUpperBound,
+          lowerBound: effect._controllerLowerBound,
         );
 
         if (effect.repeat) {
@@ -182,25 +353,42 @@ class _AndrossyGestureState extends State<AndrossyGesture>
     }
   }
 
-  void _caller(VoidCallback callback) {
-    if (_called) return;
-    _called = true;
+  void _runDebounced(VoidCallback callback) {
+    final duration = widget.debounceDuration;
+    if (duration <= Duration.zero) {
+      callback();
+      return;
+    }
+
+    if (_tapLocked) return;
+    _tapLocked = true;
     callback();
-    _timer?.cancel();
-    _timer = Timer(Duration(milliseconds: 1500), () {
-      _called = false;
-      _timer?.cancel();
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(duration, () {
+      _tapLocked = false;
+      _debounceTimer?.cancel();
+      _debounceTimer = null;
     });
   }
 
-  void _animate(VoidCallback? callback) {
-    if (callback == null) return;
-    callback();
+  void _resetTapDebounce() {
+    _debounceTimer?.cancel();
+    _debounceTimer = null;
+    _tapLocked = false;
+  }
+
+  void _playMomentaryEffect() {
     if (_isRepeatMode) return;
 
     for (var controller in _controllers) {
       controller.reverse().whenComplete(controller.forward);
     }
+  }
+
+  void _animate(VoidCallback? callback) {
+    if (callback == null) return;
+    callback();
+    _playMomentaryEffect();
   }
 
   void _animateEnd() {
@@ -217,7 +405,7 @@ class _AndrossyGestureState extends State<AndrossyGesture>
     }
   }
 
-  void _onHover(bool status) async {
+  void _onHover(bool status) {
     if (status) {
       _animateStart();
       widget.onHover?.call(true);
@@ -227,45 +415,57 @@ class _AndrossyGestureState extends State<AndrossyGesture>
     }
   }
 
-  void _onTap() async {
+  void _onTap() {
     if (widget.onTap != null) {
-      _caller(() => _animate(widget.onTap));
+      _runDebounced(() {
+        widget.onTap?.call();
+        if (!_shouldAnimateTapPress) _playMomentaryEffect();
+      });
     }
   }
 
   void _onTapUp(TapUpDetails details) {
-    _animateEnd();
+    if (_shouldAnimateTapPress) _animateEnd();
     widget.onTapUp?.call(details);
   }
 
   void _onTapDown(TapDownDetails details) {
-    _animateStart();
-    if (widget.onTapDown != null) {
-      _caller(() => widget.onTapDown!(details));
-    }
+    if (_shouldAnimateTapPress) _animateStart();
+    widget.onTapDown?.call(details);
   }
 
   void _onTapCancel() {
-    _animateEnd();
+    if (_shouldAnimateTapPress) _animateEnd();
     widget.onTapCancel?.call();
   }
 
-  void _onDoubleTap() async => _animate(widget.onDoubleTap);
+  void _onDoubleTap() => _animate(widget.onDoubleTap);
+
+  void _onLongPress() {
+    if (!_shouldAnimateLongPress) widget.onLongPress?.call();
+  }
 
   void _onLongPressStart(LongPressStartDetails details) {
     widget.onLongPressStart?.call(details);
-    widget.onLongPress?.call();
-    _animateStart();
+    if (_shouldAnimateLongPress) {
+      widget.onLongPress?.call();
+      _animateStart();
+    }
   }
 
   void _onLongPressEnd(LongPressEndDetails details) {
-    _animateEnd();
+    if (_shouldAnimateLongPress) _animateEnd();
     widget.onLongPressEnd?.call(details);
   }
 
   void _onLongPressCancel() {
-    _animateEnd();
+    if (_shouldAnimateLongPress) _animateEnd();
     widget.onLongPressCancel?.call();
+  }
+
+  void _onLongPressUp() {
+    if (_shouldAnimateLongPress) _animateEnd();
+    widget.onLongPressUp?.call();
   }
 
   @override
@@ -274,68 +474,111 @@ class _AndrossyGestureState extends State<AndrossyGesture>
     Widget child = widget.child;
 
     if (widget.enabled) {
-      if (_inkwell && widget.onLongPress == null) {
+      if (_usesInkWell) {
         child = Stack(
           children: [
             child,
             Positioned.fill(
               child: Material(
-                color: Colors.transparent,
-                surfaceTintColor: Colors.transparent,
+                color: _transparentColor,
+                surfaceTintColor: _transparentColor,
                 child: InkWell(
+                  autofocus: widget.autofocus,
+                  canRequestFocus: widget.canRequestFocus,
+                  customBorder: widget.shape,
+                  borderRadius: _resolvedInkBorderRadius(context),
+                  excludeFromSemantics: widget.excludeFromSemantics,
+                  focusNode: widget.focusNode,
                   mouseCursor: widget.mouseCursor,
                   enableFeedback: widget.enableFeedback,
+                  focusColor: _transparentColor,
+                  hoverDuration: widget.hoverDuration,
                   overlayColor: widget.overlayColor,
+                  radius: widget.splashRadius,
+                  statesController: widget.statesController,
                   splashFactory: widget.splashFactory,
-                  splashColor: widget.splashColor ?? Colors.transparent,
-                  hoverColor: widget.hoverColor ?? Colors.transparent,
-                  highlightColor: widget.highlightColor ?? Colors.transparent,
+                  splashColor: widget.splashColor ?? _transparentColor,
+                  hoverColor: widget.hoverColor ?? _transparentColor,
+                  highlightColor: widget.highlightColor ?? _transparentColor,
+                  onFocusChange: widget.onFocusChange,
                   onHover: widget.onHover != null ? _onHover : null,
                   onTap: widget.onTap != null ? _onTap : null,
                   onDoubleTap: widget.onDoubleTap != null ? _onDoubleTap : null,
-                  onTapUp: _isHoldMode ? _onTapUp : null,
-                  onTapDown: _isHoldMode ? _onTapDown : null,
-                  onTapCancel: _isHoldMode ? _onTapCancel : null,
+                  onLongPress: widget.onLongPress != null ? _onLongPress : null,
+                  onLongPressUp:
+                      widget.onLongPressUp != null ? _onLongPressUp : null,
+                  onTapUp: widget.onTapUp != null || _shouldAnimateTapPress
+                      ? _onTapUp
+                      : null,
+                  onTapDown: widget.onTapDown != null || _shouldAnimateTapPress
+                      ? _onTapDown
+                      : null,
+                  onTapCancel:
+                      widget.onTapCancel != null || _shouldAnimateTapPress
+                          ? _onTapCancel
+                          : null,
                 ),
               ),
             ),
           ],
         );
-      } else {
+      } else if (_hasGestureDetectorCallbacks) {
         child = GestureDetector(
+          behavior: _effectiveHitTestBehavior,
+          excludeFromSemantics: widget.excludeFromSemantics,
           onTap: widget.onTap != null ? _onTap : null,
           onDoubleTap: widget.onDoubleTap != null ? _onDoubleTap : null,
-          onLongPress: !_isLongPressHoldMode ? widget.onLongPress : null,
-          onLongPressStart: _isLongPressHoldMode ? _onLongPressStart : null,
-          onLongPressEnd: _isLongPressHoldMode ? _onLongPressEnd : null,
-          onLongPressCancel: _isLongPressHoldMode ? _onLongPressCancel : null,
-          onTapUp: _isHoldMode ? _onTapUp : null,
-          onTapDown: _isHoldMode ? _onTapDown : null,
-          onTapCancel: _isHoldMode ? _onTapCancel : null,
+          onLongPress: widget.onLongPress != null && !_shouldAnimateLongPress
+              ? _onLongPress
+              : null,
+          onLongPressStart:
+              widget.onLongPressStart != null || _shouldAnimateLongPress
+                  ? _onLongPressStart
+                  : null,
+          onLongPressEnd:
+              widget.onLongPressEnd != null || _shouldAnimateLongPress
+                  ? _onLongPressEnd
+                  : null,
+          onLongPressCancel:
+              widget.onLongPressCancel != null || _shouldAnimateLongPress
+                  ? _onLongPressCancel
+                  : null,
+          onLongPressUp: widget.onLongPressUp != null || _shouldAnimateLongPress
+              ? _onLongPressUp
+              : null,
+          onTapUp: widget.onTapUp != null || _shouldAnimateTapPress
+              ? _onTapUp
+              : null,
+          onTapDown: widget.onTapDown != null || _shouldAnimateTapPress
+              ? _onTapDown
+              : null,
+          onTapCancel: widget.onTapCancel != null || _shouldAnimateTapPress
+              ? _onTapCancel
+              : null,
           child: child,
         );
       }
 
-      if (kIsWeb) {
-        child = RepaintBoundary(
-          child: MouseRegion(cursor: SystemMouseCursors.click, child: child),
+      if (_needsMouseRegion) {
+        child = MouseRegion(
+          cursor: _effectiveMouseCursor,
+          onEnter: widget.onHover != null ? (_) => _onHover(true) : null,
+          onExit: widget.onHover != null ? (_) => _onHover(false) : null,
+          child: child,
         );
       }
     }
 
-    if (widget.elevation > 0 ||
-        widget.backgroundColor != null ||
-        widget.shape != null ||
-        widget.borderRadius != null) {
+    if (_hasMaterial) {
       child = Material(
         elevation: widget.elevation,
         shadowColor: widget.elevationColor,
-        borderRadius: widget.borderRadius,
+        borderRadius: _materialBorderRadius,
         color: widget.backgroundColor,
         surfaceTintColor: Colors.transparent,
-        clipBehavior: widget.clipBehavior ?? Clip.antiAlias,
+        clipBehavior: _effectiveMaterialClipBehavior,
         shape: widget.shape,
-        type: widget.materialType ?? MaterialType.canvas,
+        type: _effectiveMaterialType,
         child: child,
       );
     }
@@ -405,11 +648,12 @@ class GestureAnimation {
     this.upperBound = 1.0,
     this.lowerBound = 0.0,
     this.value = 1.0,
-    double target = 0.95,
-    this.end = 1.0,
+    double? target,
+    double? end,
     this.repeat = false,
   })  : _effect = GestureAnimations.scale,
-        begin = target,
+        begin = target ?? (lowerBound != 0.0 ? lowerBound : 0.95),
+        end = end ?? (upperBound != 1.0 ? upperBound : 1.0),
         builder = null,
         _data = null;
 
@@ -423,15 +667,19 @@ class GestureAnimation {
     this.upperBound = 1.0,
     this.lowerBound = 0.0,
     this.value = 1.0,
-    double target = 1.01,
-    double end = 1.0,
+    double? target,
+    double? end,
     this.repeat = false,
   })  : _effect = GestureAnimations.rotate,
         curve = repeat ? Curves.linear : curve,
         reverseCurve =
             repeat && reverseCurve != null ? Curves.linear : reverseCurve,
-        begin = repeat ? 1 - (target - 1) : target,
-        end = repeat ? 1 + (target - 1) : end,
+        begin = repeat
+            ? 1 - ((target ?? (lowerBound != 0.0 ? lowerBound : 1.01)) - 1)
+            : target ?? (lowerBound != 0.0 ? lowerBound : 1.01),
+        end = repeat
+            ? 1 + ((target ?? (lowerBound != 0.0 ? lowerBound : 1.01)) - 1)
+            : end ?? (upperBound != 1.0 ? upperBound : 1.0),
         builder = null,
         _data = null;
 
@@ -445,11 +693,12 @@ class GestureAnimation {
     this.upperBound = 1.0,
     this.lowerBound = 0.0,
     this.value = 1.0,
-    double target = 0.75,
-    this.end = 1.0,
+    double? target,
+    double? end,
     this.repeat = false,
   })  : _effect = GestureAnimations.fade,
-        begin = target,
+        begin = target ?? (lowerBound != 0.0 ? lowerBound : 0.75),
+        end = end ?? (upperBound != 1.0 ? upperBound : 1.0),
         builder = null,
         _data = null;
 
@@ -626,6 +875,16 @@ class GestureAnimation {
     return Tween<double>(begin: begin, end: end);
   }
 
+  bool get _usesTween => begin != null || end != null;
+
+  double get _controllerLowerBound => _usesTween ? 0.0 : lowerBound;
+
+  double get _controllerUpperBound => _usesTween ? 1.0 : upperBound;
+
+  double get _controllerValue {
+    return value.clamp(_controllerLowerBound, _controllerUpperBound).toDouble();
+  }
+
   Widget _build(BuildContext c, Animation<double> a, Widget w) {
     final anim = _tween != null ? _tween!.animate(a) : a;
     switch (_effect) {
@@ -638,11 +897,13 @@ class GestureAnimation {
       case GestureAnimations.rotate:
         if (repeat && begin != null) {
           return AnimatedBuilder(
-            animation: anim,
+            animation: a,
             builder: (ctx, ch) {
-              final t = anim.value;
-              final offset = begin! - 1.0;
-              final turns = 1.0 + offset * math.sin(t * 2 * math.pi);
+              final amplitude = math.max(
+                (begin! - 1.0).abs(),
+                ((end ?? 1.0) - 1.0).abs(),
+              );
+              final turns = 1.0 + amplitude * math.sin(a.value * 2 * math.pi);
               return RotationTransition(
                 turns: AlwaysStoppedAnimation(turns),
                 child: ch,
@@ -833,13 +1094,20 @@ class GestureAnimation {
   @override
   int get hashCode {
     return Object.hash(
+      behavior,
+      curve,
+      reverseCurve,
+      debugLabel,
       _effect,
       duration,
+      reverseDuration,
+      value,
       repeat,
       begin,
       end,
       lowerBound,
       upperBound,
+      builder,
       _data,
     );
   }
@@ -849,13 +1117,20 @@ class GestureAnimation {
     if (identical(other, this)) return true;
     if (other.runtimeType != runtimeType) return false;
     if (other is! GestureAnimation) return false;
+    if (other.behavior != behavior) return false;
+    if (other.curve != curve) return false;
+    if (other.reverseCurve != reverseCurve) return false;
+    if (other.debugLabel != debugLabel) return false;
     if (other._effect != _effect) return false;
     if (other.duration != duration) return false;
+    if (other.reverseDuration != reverseDuration) return false;
+    if (other.value != value) return false;
     if (other.repeat != repeat) return false;
     if (other.begin != begin) return false;
     if (other.end != end) return false;
     if (other.lowerBound != lowerBound) return false;
     if (other.upperBound != upperBound) return false;
+    if (other.builder != builder) return false;
     if (other._data != _data) return false;
     return true;
   }

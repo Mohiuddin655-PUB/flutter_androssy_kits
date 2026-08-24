@@ -61,45 +61,61 @@ class AndrossyTab extends StatefulWidget {
 class AndrossyTabState extends State<AndrossyTab> {
   int currentIndex = 0;
 
-  late TabController controller =
-      widget.controller ?? DefaultTabController.of(context);
+  late TabController controller;
+  Animation<double>? _controllerAnimation;
 
   void changeIndex(int value) {
     if (controller.length <= value || value < 0) return;
     if (value != currentIndex) {
-      setState(() {
-        currentIndex = value;
-        if (widget.onChanged != null) widget.onChanged!(currentIndex);
-      });
+      setState(() => currentIndex = value);
+      widget.onChanged?.call(currentIndex);
     }
   }
 
   void changePage(double value, [bool notify = false]) {
     int page = value.round();
+    if (controller.length <= page || page < 0) return;
     if (page != currentIndex) {
       currentIndex = page;
       if (widget.onChanged != null) widget.onChanged?.call(currentIndex);
-      if (notify) setState(() {});
+      if (notify && mounted) setState(() {});
     }
   }
 
   @override
-  void initState() {
-    super.initState();
-    final tc = controller;
-    currentIndex = tc.index;
-    final anim = tc.animation;
-    if (anim != null) {
-      anim.addListener(() => changePage(anim.value));
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncController();
+  }
+
+  @override
+  void didUpdateWidget(covariant AndrossyTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) _syncController();
+  }
+
+  void _syncController() {
+    final nextController =
+        widget.controller ?? DefaultTabController.of(context);
+    if (_controllerAnimation != null && identical(controller, nextController)) {
+      return;
     }
+    _controllerAnimation?.removeListener(_handleControllerAnimation);
+    controller = nextController;
+    currentIndex = controller.index;
+    _controllerAnimation = controller.animation;
+    _controllerAnimation?.addListener(_handleControllerAnimation);
+  }
+
+  void _handleControllerAnimation() {
+    final animation = _controllerAnimation;
+    if (animation == null) return;
+    changePage(animation.value, true);
   }
 
   @override
   void dispose() {
-    final anim = controller.animation;
-    if (anim != null) {
-      anim.removeListener(() => changePage(anim.value));
-    }
+    _controllerAnimation?.removeListener(_handleControllerAnimation);
     super.dispose();
   }
 

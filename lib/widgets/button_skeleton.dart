@@ -124,11 +124,7 @@ class AndrossyButtonSkeleton extends StatelessWidget {
 
   Widget _iconWidget() {
     if (indicatorVisible) return _indicator();
-    return AndrossyIcon(
-      icon,
-      color: _iconColor,
-      size: iconSize,
-    );
+    return AndrossyIcon(icon, color: _iconColor, size: iconSize);
   }
 
   Widget _child() {
@@ -153,10 +149,7 @@ class AndrossyButtonSkeleton extends StatelessWidget {
         ],
       );
       if (iconFlexible) {
-        return SizedBox(
-          width: double.infinity,
-          child: child,
-        );
+        return SizedBox(width: double.infinity, child: child);
       }
       return child;
     } else {
@@ -200,10 +193,7 @@ class AndrossyButtonSkeleton extends StatelessWidget {
       );
     }
     if (isValidWidth && isValidHeight) {
-      child = Align(
-        alignment: Alignment.center,
-        child: child,
-      );
+      child = Align(alignment: Alignment.center, child: child);
     }
     return Container(
       width: width,

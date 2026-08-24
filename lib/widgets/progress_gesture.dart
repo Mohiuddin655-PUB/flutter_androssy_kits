@@ -43,6 +43,10 @@ class _AndrossyHoldGestureState extends State<AndrossyHoldGesture> {
         (widget.onStatus != null || widget.onChanged != null);
   }
 
+  bool get _hasUpperBound => widget.max != null;
+
+  int get _upperBound => widget.max!;
+
   void _hold() {
     if (widget.onStatus != null && !_status) {
       _status = true;
@@ -52,7 +56,10 @@ class _AndrossyHoldGestureState extends State<AndrossyHoldGesture> {
       _x?.cancel();
       _y?.cancel();
       _x = Timer.periodic(widget.duration, (timer) {
-        if (_value >= (widget.max ?? 0)) return timer.cancel();
+        if (_hasUpperBound && _value >= _upperBound) {
+          timer.cancel();
+          return;
+        }
         _value++;
         widget.onChanged!(_value);
       });
@@ -68,7 +75,7 @@ class _AndrossyHoldGestureState extends State<AndrossyHoldGesture> {
       _x?.cancel();
       _y?.cancel();
       if (widget.useSmoothRelease) return _reset();
-      _value = 0;
+      _value = widget.min;
       widget.onChanged!(_value);
     }
   }
@@ -94,21 +101,38 @@ class _AndrossyHoldGestureState extends State<AndrossyHoldGesture> {
   @override
   void didUpdateWidget(covariant AndrossyHoldGesture oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.min != oldWidget.min) {
-      _value = widget.min;
+    if (widget.min != oldWidget.min || widget.max != oldWidget.max) {
+      _value = _clampValue(_value);
     }
+    if (!enabled) _cancelTimers();
   }
 
   @override
   void dispose() {
-    _x?.cancel();
-    _y?.cancel();
+    _cancelTimers();
     super.dispose();
+  }
+
+  int _clampValue(int value) {
+    final min = widget.min;
+    final max = widget.max;
+    if (max != null && max < min) return min;
+    if (value < min) return min;
+    if (max != null && value > max) return max;
+    return value;
+  }
+
+  void _cancelTimers() {
+    _x?.cancel();
+    _x = null;
+    _y?.cancel();
+    _y = null;
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTapDown: enabled ? (_) => _hold() : null,
       onTapUp: enabled ? (_) => _cancel() : null,
       onTapCancel: enabled ? _cancel : null,

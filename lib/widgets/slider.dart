@@ -33,12 +33,8 @@ enum PositionType {
 
   final double? _left, _right, _top, _bottom;
 
-  const PositionType({
-    double? left,
-    double? right,
-    double? top,
-    double? bottom,
-  })  : _left = left,
+  const PositionType({double? left, double? right, double? top, double? bottom})
+      : _left = left,
         _right = right,
         _top = top,
         _bottom = bottom;
@@ -64,15 +60,17 @@ class AndrossySlider extends StatefulWidget {
     this.onChanged,
     required this.itemCount,
     required this.builder,
-  });
+  })  : assert(frameRatio > 0, 'frameRatio must be greater than zero'),
+        assert(index >= 0, 'index must not be negative'),
+        assert(itemCount >= 0, 'itemCount must not be negative');
 
   @override
   State<AndrossySlider> createState() => _AndrossySliderState();
 }
 
 class _AndrossySliderState extends State<AndrossySlider> {
-  late final _pager = PageController(initialPage: widget.index);
-  late final _index = ValueNotifier(widget.index);
+  late final _pager = PageController(initialPage: _clampIndex(widget.index));
+  late final _index = ValueNotifier(_clampIndex(widget.index));
 
   bool get isCounterMode => widget.showCounter && widget.itemCount > 1;
 
@@ -81,11 +79,31 @@ class _AndrossySliderState extends State<AndrossySlider> {
     if (widget.onChanged != null) widget.onChanged!(value);
   }
 
+  int _clampIndex(int value) {
+    if (widget.itemCount <= 0) return 0;
+    return value.clamp(0, widget.itemCount - 1).toInt();
+  }
+
+  @override
+  void didUpdateWidget(covariant AndrossySlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextIndex = _clampIndex(widget.index);
+    if (oldWidget.index != widget.index ||
+        oldWidget.itemCount != widget.itemCount) {
+      _index.value = nextIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_pager.hasClients) return;
+        final page = _pager.page?.round() ?? _pager.initialPage;
+        if (page != nextIndex) _pager.jumpToPage(nextIndex);
+      });
+    }
+  }
+
   @override
   void dispose() {
-    super.dispose();
     _pager.dispose();
-    if (isCounterMode) _index.dispose();
+    _index.dispose();
+    super.dispose();
   }
 
   @override
@@ -142,15 +160,9 @@ class AndrossySlideCounter extends StatelessWidget {
     required this.text,
     this.borderRadius = const BorderRadius.all(Radius.circular(16)),
     this.backgroundColor = Colors.black54,
-    this.padding = const EdgeInsets.symmetric(
-      horizontal: 12,
-      vertical: 6,
-    ),
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     this.margin = const EdgeInsets.all(12),
-    this.style = const TextStyle(
-      fontSize: 12,
-      color: Colors.white,
-    ),
+    this.style = const TextStyle(fontSize: 12, color: Colors.white),
   });
 
   @override
@@ -163,11 +175,7 @@ class AndrossySlideCounter extends StatelessWidget {
       ),
       padding: padding,
       margin: margin,
-      child: Text(
-        text,
-        maxLines: 1,
-        style: style,
-      ),
+      child: Text(text, maxLines: 1, style: style),
     );
   }
 }

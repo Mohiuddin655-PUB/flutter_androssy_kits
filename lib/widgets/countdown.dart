@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 typedef AndrossyCountdownBuilder = Widget Function(
-  BuildContext context,
-  Duration duration,
-);
+    BuildContext context, Duration duration);
 typedef AndrossyCountdownRemainingListener = void Function(Duration duration);
 typedef AndrossyCountdownCompleteListener = void Function(bool complete);
 
@@ -39,6 +37,7 @@ class AndrossyCountdownState extends State<AndrossyCountdown> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       if (widget.initialStartMode) start();
     });
   }
@@ -59,7 +58,8 @@ class AndrossyCountdownState extends State<AndrossyCountdown> {
   bool _isRunning = false;
 
   void _cancel() {
-    if (_timer != null) _timer!.cancel();
+    _timer?.cancel();
+    _timer = null;
     _isRunning = false;
   }
 
@@ -73,11 +73,16 @@ class AndrossyCountdownState extends State<AndrossyCountdown> {
     if (!_isRunning) {
       if (widget.onComplete != null) widget.onComplete?.call(false);
       _timer = Timer.periodic(widget.periodic, (ticker) {
-        if (_rt.inSeconds <= 0) {
+        if (_rt.compareTo(Duration.zero) <= 0) {
           _complete(ticker);
         } else {
-          _rt = _rt - widget.decrement;
-          _remaining(_rt);
+          final remaining = _rt - widget.decrement;
+          _rt = remaining.isNegative ? Duration.zero : remaining;
+          if (_rt == Duration.zero) {
+            _complete(ticker);
+          } else {
+            _remaining(_rt);
+          }
         }
         _notify();
       });
@@ -86,8 +91,11 @@ class AndrossyCountdownState extends State<AndrossyCountdown> {
   }
 
   void _complete(Timer? ticker) {
-    if (ticker != null) ticker.cancel();
-    if (_timer != null) _timer?.cancel();
+    ticker?.cancel();
+    _timer?.cancel();
+    _timer = null;
+    _isRunning = false;
+    _rt = Duration.zero;
     if (widget.onComplete != null) widget.onComplete?.call(true);
   }
 
@@ -106,5 +114,8 @@ class AndrossyCountdownState extends State<AndrossyCountdown> {
 
   void stop() => _cancel();
 
-  void _notify() => setState(() {});
+  void _notify() {
+    if (!mounted) return;
+    setState(() {});
+  }
 }

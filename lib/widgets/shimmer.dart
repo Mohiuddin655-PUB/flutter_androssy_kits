@@ -24,7 +24,8 @@ class AndrossyShimmer extends StatefulWidget {
     this.baseColor = const Color(0x00E0E0E0),
     this.highlightColor = const Color(0x80F5F5F5),
     this.loopCount = double.infinity,
-  });
+  })  : assert(fadeWeight > 0, 'fadeWeight must be greater than zero'),
+        assert(loopCount > 0, 'loopCount must be greater than zero');
 
   @override
   State<AndrossyShimmer> createState() => _AndrossyShimmerState();
@@ -49,7 +50,8 @@ class _AndrossyShimmerState extends State<AndrossyShimmer>
     super.didUpdateWidget(oldWidget);
     if (widget.shimmerDuration != oldWidget.shimmerDuration ||
         widget.baseColor != oldWidget.baseColor ||
-        widget.highlightColor != oldWidget.highlightColor) {
+        widget.highlightColor != oldWidget.highlightColor ||
+        widget.loopCount != oldWidget.loopCount) {
       if (_shimmer != null) _shimmer!.dispose();
       _shimmer = null;
       _initShimmer();
@@ -57,7 +59,8 @@ class _AndrossyShimmerState extends State<AndrossyShimmer>
     if (widget.fadeDuration != oldWidget.fadeDuration ||
         widget.fadeUpperBound != oldWidget.fadeUpperBound ||
         widget.fadeLowerBound != oldWidget.fadeLowerBound ||
-        widget.fadeWeight != oldWidget.fadeWeight) {
+        widget.fadeWeight != oldWidget.fadeWeight ||
+        widget.loopCount != oldWidget.loopCount) {
       if (_fadeController != null) _fadeController!.dispose();
       _fadeController = null;
       _initFader();
@@ -72,23 +75,14 @@ class _AndrossyShimmerState extends State<AndrossyShimmer>
   }
 
   void _initShimmer() {
-    if (widget.shimmerDuration != Duration.zero) {
-      _shimmer = AnimationController(
-        duration: widget.shimmerDuration,
-        vsync: this,
-      )..repeat();
+    final duration = _safeDuration(widget.shimmerDuration);
+    if (duration != Duration.zero) {
+      _shimmer = AnimationController(duration: duration, vsync: this)
+        ..repeat(count: _repeatCount);
 
       _gradient = LinearGradient(
-        colors: [
-          widget.baseColor,
-          widget.highlightColor,
-          widget.baseColor,
-        ],
-        stops: const [
-          0.1,
-          0.3,
-          0.4,
-        ],
+        colors: [widget.baseColor, widget.highlightColor, widget.baseColor],
+        stops: const [0.1, 0.3, 0.4],
         begin: const Alignment(-1.0, -0.3),
         end: const Alignment(1.0, 0.3),
       );
@@ -96,37 +90,39 @@ class _AndrossyShimmerState extends State<AndrossyShimmer>
   }
 
   void _initFader() {
-    if (widget.fadeDuration != Duration.zero) {
-      _fadeController = AnimationController(
-        duration: widget.fadeDuration,
-        vsync: this,
-      );
+    final duration = _safeDuration(widget.fadeDuration);
+    if (duration != Duration.zero) {
+      final lowerBound = widget.fadeLowerBound.clamp(0.0, 1.0).toDouble();
+      final upperBound = widget.fadeUpperBound.clamp(0.0, 1.0).toDouble();
+      _fadeController = AnimationController(duration: duration, vsync: this);
       _fader = TweenSequence<double>([
         TweenSequenceItem(
-          tween: Tween(
-            begin: widget.fadeLowerBound,
-            end: widget.fadeUpperBound,
-          ),
+          tween: Tween(begin: lowerBound, end: upperBound),
           weight: widget.fadeWeight,
         ),
         TweenSequenceItem(
-          tween: Tween(
-            begin: widget.fadeUpperBound,
-            end: widget.fadeLowerBound,
-          ),
+          tween: Tween(begin: upperBound, end: lowerBound),
           weight: widget.fadeWeight,
         ),
-      ]).animate(CurvedAnimation(
-        parent: _fadeController!,
-        curve: Curves.easeInOut,
-      ));
-      _fadeController!.repeat(reverse: true);
+      ]).animate(
+        CurvedAnimation(parent: _fadeController!, curve: Curves.easeInOut),
+      );
+      _fadeController!.repeat(reverse: true, count: _repeatCount);
     }
   }
 
   bool get _isShimmer => _shimmer != null;
 
   bool get _isFader => _fadeController != null;
+
+  int? get _repeatCount {
+    if (!widget.loopCount.isFinite) return null;
+    return widget.loopCount.ceil().clamp(1, 0x7fffffff).toInt();
+  }
+
+  Duration _safeDuration(Duration value) {
+    return value.isNegative ? Duration.zero : value;
+  }
 
   @override
   Widget build(BuildContext context) {

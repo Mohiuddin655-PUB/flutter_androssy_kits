@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 
-import '../core/cached_network_image.dart';
 import 'image.dart';
 
 class AndrossyAvatar extends StatelessWidget {
   final dynamic data;
-  final double size;
+  final double? size;
   final Border? border;
   final BoxShadow? shadow;
   final Color? backgroundColor;
-  final AndrossyNetworkImageConfig? networkImageConfig;
 
   const AndrossyAvatar(
     this.data, {
     super.key,
-    this.size = 40,
+    this.size,
     this.border,
     this.backgroundColor,
     this.shadow,
-    this.networkImageConfig,
   });
 
   @override
@@ -39,14 +36,7 @@ class AndrossyAvatar extends StatelessWidget {
           color: backgroundColor,
           shape: BoxShape.circle,
         ),
-        child: AndrossyImage(
-          data,
-          fit: BoxFit.cover,
-          networkImageConfig: networkImageConfig ??
-              AndrossyNetworkImageConfig(
-                errorWidget: (_, __, ___) => const SizedBox(),
-              ),
-        ),
+        child: AndrossyImage(data, fit: BoxFit.cover),
       ),
     );
   }

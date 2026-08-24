@@ -12,7 +12,8 @@ class AndrossyRatingIndicator extends StatefulWidget {
     this.itemSize = 40.0,
     this.physics = const NeverScrollableScrollPhysics(),
     this.rating = 0.0,
-  });
+  })  : assert(itemCount >= 0, 'itemCount must not be negative'),
+        assert(itemSize >= 0, 'itemSize must not be negative');
 
   final IndexedWidgetBuilder itemBuilder;
 
@@ -45,16 +46,14 @@ class _AndrossyRatingIndicatorState extends State<AndrossyRatingIndicator> {
   @override
   void initState() {
     super.initState();
-    _ratingNumber = widget.rating.truncate() + 1;
-    _ratingFraction = widget.rating - _ratingNumber + 1;
+    _syncRating();
   }
 
   @override
   Widget build(BuildContext context) {
     final textDirection = widget.textDirection ?? Directionality.of(context);
     _isRTL = textDirection == TextDirection.rtl;
-    _ratingNumber = widget.rating.truncate() + 1;
-    _ratingFraction = widget.rating - _ratingNumber + 1;
+    _syncRating();
     return SingleChildScrollView(
       scrollDirection: widget.direction,
       physics: widget.physics,
@@ -72,24 +71,28 @@ class _AndrossyRatingIndicatorState extends State<AndrossyRatingIndicator> {
     );
   }
 
+  void _syncRating() {
+    final rating =
+        widget.rating.clamp(0.0, widget.itemCount.toDouble()).toDouble();
+    _ratingNumber = rating.truncate() + 1;
+    _ratingFraction = (rating - _ratingNumber + 1).clamp(0.0, 1.0).toDouble();
+  }
+
   List<Widget> get _children {
-    return List.generate(
-      widget.itemCount,
-      (index) {
-        if (widget.textDirection != null) {
-          if (widget.textDirection == TextDirection.rtl &&
-              Directionality.of(context) != TextDirection.rtl) {
-            return Transform(
-              transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
-              alignment: Alignment.center,
-              transformHitTests: false,
-              child: _buildItems(index),
-            );
-          }
+    return List.generate(widget.itemCount, (index) {
+      if (widget.textDirection != null) {
+        if (widget.textDirection == TextDirection.rtl &&
+            Directionality.of(context) != TextDirection.rtl) {
+          return Transform(
+            transform: Matrix4.identity()..scaleByDouble(-1.0, 1.0, 1.0, 1.0),
+            alignment: Alignment.center,
+            transformHitTests: false,
+            child: _buildItems(index),
+          );
         }
-        return _buildItems(index);
-      },
-    );
+      }
+      return _buildItems(index);
+    });
   }
 
   Widget _buildItems(int index) {
@@ -129,9 +132,7 @@ class _AndrossyRatingIndicatorState extends State<AndrossyRatingIndicator> {
                 FittedBox(
                   fit: BoxFit.contain,
                   child: ClipRect(
-                    clipper: _IndicatorClipper(
-                      ratingFraction: _ratingFraction,
-                    ),
+                    clipper: _IndicatorClipper(ratingFraction: _ratingFraction),
                     child: widget.itemBuilder(context, index),
                   ),
                 ),
@@ -143,10 +144,7 @@ class _AndrossyRatingIndicatorState extends State<AndrossyRatingIndicator> {
 }
 
 class _IndicatorClipper extends CustomClipper<Rect> {
-  _IndicatorClipper({
-    required this.ratingFraction,
-    this.rtlMode = false,
-  });
+  _IndicatorClipper({required this.ratingFraction, this.rtlMode = false});
 
   final double ratingFraction;
   final bool rtlMode;
@@ -160,12 +158,7 @@ class _IndicatorClipper extends CustomClipper<Rect> {
             size.width,
             size.height,
           )
-        : Rect.fromLTRB(
-            0.0,
-            0.0,
-            size.width * ratingFraction,
-            size.height,
-          );
+        : Rect.fromLTRB(0.0, 0.0, size.width * ratingFraction, size.height);
   }
 
   @override

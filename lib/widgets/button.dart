@@ -270,8 +270,14 @@ class AndrossyButtonState extends State<AndrossyButton> {
       onTap: _clickable && (widget.onTap != null || widget.onToggle != null)
           ? _onTap
           : null,
+      onTapUp: _clickable ? widget.onTapUp : null,
+      onTapDown: _clickable ? widget.onTapDown : null,
+      onTapCancel: _clickable ? widget.onTapCancel : null,
       onDoubleTap: _clickable ? widget.onDoubleTap : null,
       onLongPress: _clickable ? widget.onLongPress : null,
+      onLongPressStart: _clickable ? widget.onLongPressStart : null,
+      onLongPressEnd: _clickable ? widget.onLongPressEnd : null,
+      onLongPressCancel: _clickable ? widget.onLongPressCancel : null,
       onHover: _clickable ? widget.onHover : null,
       child: AndrossyButtonSkeleton(
         width: widget.width,
